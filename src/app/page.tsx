@@ -11,11 +11,149 @@ declare global {
   }
 }
 
+// Starter fallback catalog for instantaneous 0ms first render (eliminates blank screen & layout shift on phones)
+const STARTER_PRODUCTS: Product[] = [
+  {
+    id: 'prod_daisy_tote',
+    name: 'Daisy Dream Tote',
+    slug: 'daisy-dream-tote',
+    category: 'Bags',
+    price: 1299,
+    salePrice: 1199,
+    stock: 8,
+    sku: 'BAG-DD-01',
+    desc: 'A cheerful everyday bag, stitched slowly by hand with soft milk-cotton yarn. Features sturdy reinforced handles and signature floral motif.',
+    image: 'https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=600&q=80',
+    images: ['https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=600&q=80'],
+    emoji: '👜',
+    tag: 'BESTSELLER',
+    isPublished: true,
+    isFeatured: true,
+    isBestseller: true,
+    isNewArrival: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'prod_sunflower_stem',
+    name: 'Sunflower Stem Keepsake',
+    slug: 'sunflower-stem-keepsake',
+    category: 'Flowers',
+    price: 299,
+    salePrice: 349,
+    stock: 15,
+    sku: 'FLW-SF-02',
+    desc: 'Bright wool sunflowers made to sit quietly in vintage bottles on sunny desks. A gift of eternal warmth that never loses its petals.',
+    image: 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?auto=format&fit=crop&w=600&q=80',
+    images: ['https://images.unsplash.com/photo-1597848212624-a19eb35e2651?auto=format&fit=crop&w=600&q=80'],
+    emoji: '🌸',
+    tag: 'HANDMADE',
+    isPublished: true,
+    isFeatured: true,
+    isBestseller: false,
+    isNewArrival: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'prod_boba_bear',
+    name: 'Boba Bear Plushie',
+    slug: 'boba-bear-plushie',
+    category: 'Plushies',
+    price: 799,
+    salePrice: 899,
+    stock: 5,
+    sku: 'PLS-BB-03',
+    desc: 'Pocket-sized palm comfort, holding a tiny pearl cup for slow tea afternoons. Hand-stitched with hypoallergenic velvet yarn.',
+    image: 'https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=600&q=80',
+    images: ['https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=600&q=80'],
+    emoji: '🧸',
+    tag: 'NEW ARRIVAL',
+    isPublished: true,
+    isFeatured: true,
+    isBestseller: false,
+    isNewArrival: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'prod_cherry_scrunchie',
+    name: 'Cherry Blossom Scrunchie',
+    slug: 'cherry-blossom-scrunchie',
+    category: 'Accessories',
+    price: 199,
+    salePrice: 249,
+    stock: 22,
+    sku: 'ACC-CB-04',
+    desc: 'A gentle hair cloud that prevents hair fall and adds a handcrafted soft touch to everyday ponytails and messy buns.',
+    image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80',
+    images: ['https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80'],
+    emoji: '✨',
+    tag: 'HANDMADE',
+    isPublished: true,
+    isFeatured: false,
+    isBestseller: false,
+    isNewArrival: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'prod_lavender_whisper',
+    name: 'Lavender Whisper Bouquet',
+    slug: 'lavender-whisper-bouquet',
+    category: 'Flowers',
+    price: 549,
+    salePrice: 649,
+    stock: 10,
+    sku: 'FLW-LV-05',
+    desc: 'Five slender sprigs of calming purple hues bundled in textured parchment and tied with a handmade cotton cord bow.',
+    image: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=80',
+    images: ['https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=80'],
+    emoji: '🌸',
+    tag: 'LIMITED EDITION',
+    isPublished: true,
+    isFeatured: true,
+    isBestseller: false,
+    isNewArrival: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'prod_strawberry_pouch',
+    name: 'Strawberry Sweetheart Pouch',
+    slug: 'strawberry-sweetheart-pouch',
+    category: 'Bags',
+    price: 699,
+    salePrice: 799,
+    stock: 6,
+    sku: 'BAG-SB-06',
+    desc: 'A cute berry coin bag with green leaf drawstrings. Keeps lip balms, AirPods, keys, and small coins safe.',
+    image: 'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600&q=80',
+    images: ['https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600&q=80'],
+    emoji: '👜',
+    tag: 'BESTSELLER',
+    isPublished: true,
+    isFeatured: false,
+    isBestseller: true,
+    isNewArrival: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+];
+
+const STARTER_CATEGORIES: Category[] = [
+  { id: 'cat_bags', name: 'Bags', slug: 'bags', description: 'Slowly hand-crocheted everyday totes, pouches, and slings.', image: 'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600&q=80', icon: '👜', displayOrder: 1, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'cat_flowers', name: 'Flowers', slug: 'flowers', description: 'Everlasting blooms crafted with premium cotton yarn.', image: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=80', icon: '🌸', displayOrder: 2, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'cat_plushies', name: 'Plushies', slug: 'plushies', description: 'Whimsical companions stuffed with love and softness.', image: 'https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=600&q=80', icon: '🧸', displayOrder: 3, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'cat_accessories', name: 'Accessories', slug: 'accessories', description: 'Delicate crochet scrunchies, coasters, and charms.', image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80', icon: '✨', displayOrder: 4, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
+];
+
 export default function Storefront() {
   const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919152831829';
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Pre-populated initial state guarantees zero blank flash on mobile phones
+  const [products, setProducts] = useState<Product[]>(STARTER_PRODUCTS);
+  const [categories, setCategories] = useState<Category[]>(STARTER_CATEGORIES);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [bannerOffer, setBannerOffer] = useState<Offer | null>(null);
@@ -23,6 +161,7 @@ export default function Storefront() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   // Product Detail Modal State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -87,8 +226,27 @@ export default function Storefront() {
     }
   };
 
-  // Fetch live storefront data from DB
+  // Fetch live storefront data in 1 single ultra-fast combined API call
   const loadData = async () => {
+    try {
+      const res = await fetch('/api/storefront/init');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.products && data.products.length > 0) {
+          setProducts(data.products);
+        }
+        if (data.categories && data.categories.length > 0) {
+          setCategories(data.categories);
+        }
+        if (data.collections) setCollections(data.collections);
+        if (data.reviews) setReviews(data.reviews);
+        if (data.banner) setBannerOffer(data.banner);
+        return;
+      }
+    } catch {
+      // Fallback to individual endpoints if init fails
+    }
+
     try {
       const [prodRes, colRes, revRes, catRes, offerRes] = await Promise.all([
         fetch('/api/products'),
@@ -99,19 +257,19 @@ export default function Storefront() {
       ]);
       if (prodRes.ok) {
         const prodData = await prodRes.json();
-        setProducts(prodData.products || []);
+        if (prodData.products && prodData.products.length > 0) setProducts(prodData.products);
       }
       if (colRes.ok) {
         const colData = await colRes.json();
-        setCollections(colData.collections || []);
+        if (colData.collections) setCollections(colData.collections);
       }
       if (revRes.ok) {
         const revData = await revRes.json();
-        setReviews(revData.reviews || []);
+        if (revData.reviews) setReviews(revData.reviews);
       }
       if (catRes.ok) {
         const catData = await catRes.json();
-        setCategories(catData.categories || []);
+        if (catData.categories && catData.categories.length > 0) setCategories(catData.categories);
       }
       if (offerRes.ok) {
         const offerData = await offerRes.json();
@@ -622,6 +780,8 @@ export default function Storefront() {
                       <img
                         src={p.image}
                         alt={p.name}
+                        loading="lazy"
+                        decoding="async"
                         onError={e => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
@@ -669,6 +829,10 @@ export default function Storefront() {
                     </div>
                   </div>
                 </article>
+              ))
+            ) : isLoadingProducts ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="product skeleton-shimmer" style={{ minHeight: '320px', borderRadius: '18px', border: '1px solid #ebd9c3' }} />
               ))
             ) : (
               <div className="empty" style={{ gridColumn: '1/-1' }}>
