@@ -333,6 +333,11 @@ export default function AdminDashboard() {
         if (res.ok) {
           showToast('Product updated in database ✿');
           setIsProductModalOpen(false);
+          resetProductForm();
+          loadAllData();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData.error || 'Failed to update product');
         }
       } else {
         const res = await fetch('/api/products', {
@@ -343,10 +348,13 @@ export default function AdminDashboard() {
         if (res.ok) {
           showToast('New product added to database ✿');
           setIsProductModalOpen(false);
+          resetProductForm();
+          loadAllData();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData.error || 'Failed to add product');
         }
       }
-      resetProductForm();
-      loadAllData();
     } catch {
       showToast('Failed to save product');
     }
@@ -402,7 +410,8 @@ export default function AdminDashboard() {
       showToast(`"${name}" removed from database ✿`);
       loadAllData();
     } else {
-      showToast('Could not delete product');
+      const errData = await res.json().catch(() => ({}));
+      showToast(errData.error || 'Could not delete product');
     }
   };
 
