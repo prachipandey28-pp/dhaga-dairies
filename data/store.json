@@ -1,0 +1,559 @@
+{
+  "adminUsers": [
+    {
+      "id": "admin_1",
+      "email": "admin@dhagadiaries.com",
+      "passwordHash": "$2b$10$olGQ3N.guwTrOxSG0JS6J.WjDdf8JuCYKZmZg/ArYo3hlI2N71Nyi",
+      "name": "Dhaga Admin",
+      "role": "admin",
+      "createdAt": "2026-10-21T03:46:04.969Z"
+    },
+    {
+      "id": "admin_2",
+      "email": "owner@dhagadiaries.com",
+      "passwordHash": "$2b$12$70NUH48ZGC99f4C.ZHgm6ezAWqidYAf1RRpKMAgQ7R1ySMbQOeTry",
+      "name": "Store Owner",
+      "role": "owner",
+      "createdAt": "2026-10-21T03:46:05.046Z"
+    }
+  ],
+  "products": [
+    {
+      "name": "Tulip clip ",
+      "slug": "tulip-clip-5720",
+      "category": "Accessories",
+      "price": 70,
+      "salePrice": null,
+      "stock": 49,
+      "sku": "clip",
+      "desc": "clips",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg"
+      ],
+      "emoji": "👜",
+      "tag": "HANDMADE",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792853665720_wls8",
+      "createdAt": "2026-10-24T14:54:25.724Z",
+      "updatedAt": "2026-10-24T15:06:06.111Z"
+    },
+    {
+      "name": "Flower Clip ",
+      "slug": "flower-clip-4871",
+      "category": "Accessories",
+      "price": 100,
+      "salePrice": null,
+      "stock": 8,
+      "sku": "clip",
+      "desc": "clip",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM_1792853585793.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM_1792853585793.jpeg"
+      ],
+      "emoji": "👜",
+      "tag": "BESTSELLER",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792853594871_1wxk",
+      "createdAt": "2026-10-24T14:53:14.875Z",
+      "updatedAt": "2026-10-24T14:53:14.875Z"
+    },
+    {
+      "name": "Rose tulip ",
+      "slug": "rose-tulip-8905",
+      "category": "Accessories",
+      "price": 200,
+      "salePrice": null,
+      "stock": 8,
+      "sku": "rose",
+      "desc": "rose",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM__1__1792853378700.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM__1__1792853378700.jpeg"
+      ],
+      "emoji": "🎀",
+      "tag": "HANDMADE",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792853398906_vl07",
+      "createdAt": "2026-10-24T14:49:58.908Z",
+      "updatedAt": "2026-10-24T14:49:58.908Z"
+    },
+    {
+      "name": "Rose n heart bouquet ",
+      "slug": "rose-n-heart-bouquet-8503",
+      "category": "Flowers",
+      "price": 400,
+      "salePrice": null,
+      "stock": 10,
+      "sku": "bouquet",
+      "desc": "bouquet",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM_1792853292409.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM_1792853292409.jpeg"
+      ],
+      "emoji": "🌷",
+      "tag": "HANDMADE",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792853318503_zeld",
+      "createdAt": "2026-10-24T14:48:38.507Z",
+      "updatedAt": "2026-10-24T14:48:38.507Z"
+    },
+    {
+      "name": "Simpal Gajra ",
+      "slug": "simpal-gajra-1799",
+      "category": "Bags",
+      "price": 300,
+      "salePrice": 250,
+      "stock": 50,
+      "sku": "gajra",
+      "desc": "gajra",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM__1__1792853192777.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM__1__1792853192777.jpeg"
+      ],
+      "emoji": "👜",
+      "tag": "NEW ARRIVAL",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792853211799_xome",
+      "createdAt": "2026-10-24T14:46:51.802Z",
+      "updatedAt": "2026-10-24T14:47:05.566Z"
+    },
+    {
+      "name": "Chaffa keychain ",
+      "slug": "chaffa-keychain-7558",
+      "category": "Plushies",
+      "price": 200,
+      "salePrice": 200,
+      "stock": 8,
+      "sku": "keychain",
+      "desc": "keychain",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM_1792852319508.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM_1792852319508.jpeg"
+      ],
+      "emoji": "👜",
+      "tag": "LIMITED EDITION",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792852337558_cvd3",
+      "createdAt": "2026-10-24T14:32:17.562Z",
+      "updatedAt": "2026-10-24T14:32:17.562Z"
+    },
+    {
+      "name": "Claw clips ",
+      "slug": "claw-clips-6419",
+      "category": "Accessories",
+      "price": 200,
+      "salePrice": 200,
+      "stock": 8,
+      "sku": "clips",
+      "desc": "hair clips",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_34_59_PM__1__1792852208739.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_38_20_PM_1792852179457.jpeg",
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_34_59_PM__1__1792852208739.jpeg"
+      ],
+      "emoji": "🎀",
+      "tag": "BESTSELLER",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792852236419_f9s5",
+      "createdAt": "2026-10-24T14:30:36.422Z",
+      "updatedAt": "2026-10-24T14:30:36.422Z"
+    },
+    {
+      "name": "Rubberbands ",
+      "slug": "rubberbands-5888",
+      "category": "Accessories",
+      "price": 60,
+      "salePrice": 60,
+      "stock": 25,
+      "sku": "rubber",
+      "desc": "hair accessories ",
+      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_38_20_PM_1792851412264.jpeg",
+      "images": [
+        "/uploads/WhatsApp_Image_2026-10-11_at_5_38_20_PM_1792851412264.jpeg"
+      ],
+      "emoji": "🎀",
+      "tag": "HANDMADE",
+      "isPublished": true,
+      "isFeatured": false,
+      "isBestseller": false,
+      "isNewArrival": false,
+      "scheduledLaunchAt": null,
+      "id": "prod_1792851455888_4y6w",
+      "createdAt": "2026-10-24T14:17:35.892Z",
+      "updatedAt": "2026-10-24T14:17:35.892Z"
+    }
+  ],
+  "collections": [
+    {
+      "id": "c1",
+      "name": "Crochet Bags",
+      "slug": "bags",
+      "subtitle": "Handmade bags ↗",
+      "description": "Sturdy, stylish, and slow-crafted crochet tote bags and shoulder purses.",
+      "image": "https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600&q=85",
+      "icon": "👜",
+      "displayOrder": 1,
+      "isPublished": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-10-21T04:12:13.515Z"
+    },
+    {
+      "id": "c2",
+      "name": "Yarn Flowers",
+      "slug": "flowers",
+      "subtitle": "Forever flowers ↗",
+      "description": "Delicate yarn tulips, daisies, and lavender sprigs that bloom forever.",
+      "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=85",
+      "icon": "🌷",
+      "displayOrder": 2,
+      "isPublished": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "c3",
+      "name": "Plushies",
+      "slug": "plushies",
+      "subtitle": "Soft little friends ↗",
+      "description": "Adorably crafted amigurumi creatures bringing warmth to every space.",
+      "image": "https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=600&q=85",
+      "icon": "🧸",
+      "displayOrder": 3,
+      "isPublished": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "c4",
+      "name": "Little Things",
+      "slug": "accessories",
+      "subtitle": "Tiny treasures ↗",
+      "description": "Handmade bookmarks, keychains, coasters, and sweet little gifts.",
+      "image": "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=85",
+      "icon": "🎀",
+      "displayOrder": 4,
+      "isPublished": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "reviews": [
+    {
+      "productId": "prod_1792554365149_9fh7j",
+      "productName": "Lilac Floral Crochet Coaster Set",
+      "customerName": "Meera K.",
+      "rating": 5,
+      "title": "Lilac Floral Coaster Set",
+      "quote": "Such vibrant colors and exquisite craftsmanship! Brightens my tea table every morning.",
+      "byline": "— CUSTOMER NOTE",
+      "image": "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=85",
+      "isApproved": true,
+      "isVerifiedPurchase": true,
+      "id": "rev_1792554365176",
+      "createdAt": "2026-10-21T03:46:05.176Z"
+    },
+    {
+      "id": "r1",
+      "productId": "p1",
+      "productName": "Daisy Dream Tote",
+      "customerName": "Aanya S.",
+      "rating": 5,
+      "title": "Daisy Dream Tote",
+      "quote": "The detailing is beautiful and the bag feels so special. You can tell it was made with care.",
+      "byline": "— CUSTOMER NOTE",
+      "image": "https://images.unsplash.com/photo-1638427291164-b4adea2f7b96?auto=format&fit=crop&w=900&q=85",
+      "isApproved": true,
+      "isVerifiedPurchase": true,
+      "createdAt": "2026-01-05T12:00:00Z"
+    },
+    {
+      "id": "r2",
+      "productId": "p2",
+      "productName": "Forever Bloom Bouquet",
+      "customerName": "Priya M.",
+      "rating": 5,
+      "title": "Forever Bloom Bouquet",
+      "quote": "Such a thoughtful gift. The colours are lovely, and these blooms will brighten my room for ages.",
+      "byline": "— CUSTOMER NOTE",
+      "image": "https://images.unsplash.com/photo-1749013308478-4176584af239?auto=format&fit=crop&w=900&q=85",
+      "isApproved": true,
+      "isVerifiedPurchase": true,
+      "createdAt": "2026-01-08T14:30:00Z"
+    },
+    {
+      "id": "r3",
+      "productId": null,
+      "productName": "Little Handmade Keepsake",
+      "customerName": "Rhea K.",
+      "rating": 5,
+      "title": "Little Handmade Keepsake",
+      "quote": "A tiny piece of happiness. The stitches and colours make it feel wonderfully personal.",
+      "byline": "— CUSTOMER NOTE",
+      "image": "https://images.unsplash.com/photo-1700171518313-5dd219beaaa6?auto=format&fit=crop&w=900&q=85",
+      "isApproved": true,
+      "isVerifiedPurchase": true,
+      "createdAt": "2026-01-14T09:15:00Z"
+    }
+  ],
+  "orders": [],
+  "transactions": [
+    {
+      "orderId": "ord_1792849766759_8471",
+      "razorpayPaymentId": "pay_sim_1792849766988",
+      "razorpayOrderId": "order_sim_1792849766981_2dmwcb",
+      "amount": 634,
+      "currency": "INR",
+      "status": "captured",
+      "id": "tx_1792849767007",
+      "createdAt": "2026-10-24T13:49:27.010Z"
+    },
+    {
+      "orderId": "ord_1792849675074_6513",
+      "razorpayPaymentId": "pay_sim_1792849686263",
+      "razorpayOrderId": "order_sim_1792849686256_3ceiyr",
+      "amount": 634,
+      "currency": "INR",
+      "status": "captured",
+      "id": "tx_1792849686287",
+      "createdAt": "2026-10-24T13:48:06.288Z"
+    },
+    {
+      "orderId": "ord_1792555093773",
+      "razorpayPaymentId": "pay_sim_1792555105058",
+      "razorpayOrderId": "order_sim_1792555105054_tmz8sa",
+      "amount": 1047,
+      "currency": "INR",
+      "status": "captured",
+      "id": "tx_1792555105069",
+      "createdAt": "2026-10-21T03:58:25.069Z"
+    },
+    {
+      "orderId": "ord_1792555052873",
+      "razorpayPaymentId": "pay_sim_1792555053081",
+      "razorpayOrderId": "order_sim_1792555053077_a1798y",
+      "amount": 677,
+      "currency": "INR",
+      "status": "captured",
+      "id": "tx_1792555053094",
+      "createdAt": "2026-10-21T03:57:33.094Z"
+    },
+    {
+      "orderId": "ord_1792554365189",
+      "razorpayPaymentId": "pay_test_1792554398833",
+      "razorpayOrderId": "order_sim_1792554398829_yq9g74",
+      "amount": 1548,
+      "currency": "INR",
+      "status": "captured",
+      "id": "tx_1792554398869",
+      "createdAt": "2026-10-21T03:46:38.869Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat_bags",
+      "name": "Bags",
+      "slug": "bags",
+      "description": "Slowly hand-crocheted everyday totes, pouches, and slings.",
+      "image": "https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600&q=85",
+      "icon": "👜",
+      "displayOrder": 1,
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat_flowers",
+      "name": "Flowers",
+      "slug": "flowers",
+      "description": "Everlasting blooms crafted with premium cotton yarn that never wilt.",
+      "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=85",
+      "icon": "🌸",
+      "displayOrder": 2,
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat_plushies",
+      "name": "Plushies",
+      "slug": "plushies",
+      "description": "Whimsical companions stuffed with love, softness, and nostalgia.",
+      "image": "https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=600&q=85",
+      "icon": "🧸",
+      "displayOrder": 3,
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "cat_accessories",
+      "name": "Accessories",
+      "slug": "accessories",
+      "description": "Delicate crochet scrunchies, coasters, keychains, and charms.",
+      "image": "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=85",
+      "icon": "✨",
+      "displayOrder": 4,
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "offers": [
+    {
+      "id": "off_spring_fest",
+      "title": "Spring Blossom Celebration",
+      "description": "Celebrate hand-knitted creations with 15% off across all boutique pieces.",
+      "discountType": "percentage",
+      "discountValue": 15,
+      "bannerText": "🌸 SPRING SPECIAL: Flat 15% OFF with code CROCHET15 | Free Shipping on orders over ₹999 🧶",
+      "isBannerActive": true,
+      "startDate": "2026-10-21T07:51:13.852Z",
+      "endDate": "2026-11-21T07:51:13.852Z",
+      "isActive": true,
+      "scope": "all",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "off_bag_season",
+      "title": "Tote Bag Festival",
+      "description": "Get ₹100 direct off on our best-selling artisanal bags and pouches.",
+      "discountType": "fixed",
+      "discountValue": 100,
+      "bannerText": "👜 Handbag Season: Save ₹100 on every Daisy Tote with code BAG100",
+      "isBannerActive": false,
+      "startDate": "2026-10-21T07:51:13.852Z",
+      "endDate": "2026-11-06T07:51:13.852Z",
+      "isActive": true,
+      "scope": "category",
+      "category": "Bags",
+      "createdAt": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "coupons": [
+    {
+      "id": "coup_welcome10",
+      "code": "WELCOME10",
+      "description": "10% off for first-time crochet lovers",
+      "discountType": "percentage",
+      "discountValue": 10,
+      "minOrderAmount": 500,
+      "maxDiscountAmount": 300,
+      "usageLimit": 500,
+      "usedCount": 0,
+      "perCustomerLimit": 1,
+      "isActive": true,
+      "scope": "all",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "coup_crochet15",
+      "code": "CROCHET15",
+      "description": "15% off spring season promotion",
+      "discountType": "percentage",
+      "discountValue": 15,
+      "minOrderAmount": 799,
+      "maxDiscountAmount": 500,
+      "usageLimit": 200,
+      "usedCount": 0,
+      "perCustomerLimit": 1,
+      "isActive": true,
+      "scope": "all",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-10-24T14:05:59.839Z"
+    },
+    {
+      "id": "coup_dhaga50",
+      "code": "DHAGA50",
+      "description": "Flat ₹50 off on any handmade order",
+      "discountType": "fixed",
+      "discountValue": 50,
+      "minOrderAmount": 299,
+      "maxDiscountAmount": 50,
+      "usageLimit": 1000,
+      "usedCount": 0,
+      "perCustomerLimit": 2,
+      "isActive": true,
+      "scope": "all",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "coup_bag100",
+      "code": "BAG100",
+      "description": "Flat ₹100 off on bag collection",
+      "discountType": "fixed",
+      "discountValue": 100,
+      "minOrderAmount": 999,
+      "maxDiscountAmount": 100,
+      "usageLimit": 150,
+      "usedCount": 0,
+      "perCustomerLimit": 1,
+      "isActive": true,
+      "scope": "category",
+      "scopeTarget": "Bags",
+      "createdAt": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "variants": [
+    {
+      "id": "var_daisy_pink",
+      "productId": "prod_daisy_tote",
+      "title": "Pastel Pink",
+      "sku": "BAG-DD-01-PNK",
+      "price": 1299,
+      "stock": 4,
+      "createdAt": "2026-01-10T10:00:00Z"
+    },
+    {
+      "id": "var_daisy_cream",
+      "productId": "prod_daisy_tote",
+      "title": "Classic Cream",
+      "sku": "BAG-DD-01-CRM",
+      "price": 1299,
+      "stock": 4,
+      "createdAt": "2026-01-10T10:00:00Z"
+    },
+    {
+      "id": "var_sun_yellow",
+      "productId": "prod_sunflower_stem",
+      "title": "Sun Yellow",
+      "sku": "FLW-SF-02-YEL",
+      "price": 349,
+      "stock": 10,
+      "createdAt": "2026-01-12T10:00:00Z"
+    },
+    {
+      "id": "var_sun_amber",
+      "productId": "prod_sunflower_stem",
+      "title": "Amber Gold",
+      "sku": "FLW-SF-02-AMB",
+      "price": 349,
+      "stock": 5,
+      "createdAt": "2026-01-12T10:00:00Z"
+    }
+  ]
+}
