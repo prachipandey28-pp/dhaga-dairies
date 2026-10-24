@@ -30,22 +30,39 @@ interface DatabaseSchema {
   transactions: PaymentTransaction[];
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const IS_SERVERLESS = Boolean(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.NETLIFY
+);
+
+const DATA_DIR = IS_SERVERLESS
+  ? path.join('/tmp', 'dhaga_data')
+  : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'store.json');
+
+let inMemoryDb: DatabaseSchema | null = null;
 
 // Ensure local JSON DB file exists for local development/fallback
 function ensureDb(): DatabaseSchema {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  if (!fs.existsSync(DB_FILE)) {
-    const initialData = getInitialSeed();
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
-    return initialData;
-  }
+  if (inMemoryDb) return inMemoryDb;
 
   try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+
+    if (!fs.existsSync(DB_FILE)) {
+      const initialData = getInitialSeed();
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+      } catch {
+        // read-only filesystem fallback
+      }
+      inMemoryDb = initialData;
+      return initialData;
+    }
+
     const raw = fs.readFileSync(DB_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     let changed = false;
@@ -69,24 +86,35 @@ function ensureDb(): DatabaseSchema {
     }
 
     if (changed) {
-      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+      } catch {
+        // read-only fallback
+      }
     }
+    inMemoryDb = parsed;
     return parsed;
   } catch (err) {
-    console.error('Error reading database file, re-seeding:', err);
-    const initialData = getInitialSeed();
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
-    return initialData;
+    console.warn('Fallback to in-memory database:', err);
+    if (!inMemoryDb) {
+      inMemoryDb = getInitialSeed();
+    }
+    return inMemoryDb;
   }
 }
 
 function saveDb(data: DatabaseSchema): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  inMemoryDb = data;
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const tempFile = `${DB_FILE}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tempFile, DB_FILE);
+  } catch (err) {
+    console.warn('Could not write to disk on serverless, retained in memory:', err);
   }
-  const tempFile = `${DB_FILE}.tmp`;
-  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tempFile, DB_FILE);
 }
 
 function getInitialSeed(): DatabaseSchema {

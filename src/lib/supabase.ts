@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const rawSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const rawSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Clean whitespace, enclosing quotes, and trailing slashes
+const supabaseUrl = rawSupabaseUrl.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
+const supabaseAnonKey = rawSupabaseAnonKey.trim().replace(/^["']|["']$/g, '');
+const supabaseServiceRoleKey = rawSupabaseServiceRoleKey.trim().replace(/^["']|["']$/g, '');
 
 export function isSupabaseConfigured(): boolean {
   if (!supabaseUrl || !supabaseAnonKey) return false;
