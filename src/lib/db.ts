@@ -797,7 +797,7 @@ export async function getProducts(options?: {
   const supabase = getSupabaseServerClient();
   if (supabase) {
     try {
-      let q = supabase.from('products').select('*, product_variants(*)').order('created_at', { ascending: false });
+      let q = supabase.from('products').select('*').order('created_at', { ascending: false });
 
       if (options?.onlyPublished) {
         q = q.eq('is_published', true);
@@ -822,7 +822,7 @@ export async function getProducts(options?: {
           sku: p.sku,
           desc: p.description || '',
           image: p.image,
-          images: Array.isArray(p.images) ? p.images : [],
+          images: Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []),
           emoji: p.emoji || '🧶',
           tag: p.tag || 'HANDMADE',
           isPublished: p.is_published,
@@ -830,15 +830,6 @@ export async function getProducts(options?: {
           isBestseller: p.is_bestseller,
           isNewArrival: p.is_new_arrival,
           scheduledLaunchAt: p.scheduled_launch_at,
-          variants: (p.product_variants || []).map((v: any) => ({
-            id: v.id,
-            productId: v.product_id,
-            title: v.title,
-            sku: v.sku,
-            price: v.price ? Number(v.price) : null,
-            stock: Number(v.stock),
-            createdAt: v.created_at,
-          })),
           createdAt: p.created_at,
           updatedAt: p.updated_at,
         }));
@@ -853,6 +844,9 @@ export async function getProducts(options?: {
           );
         }
         return list;
+      }
+      if (error) {
+        console.error('Supabase getProducts error:', error);
       }
     } catch (e) {
       console.warn('Supabase getProducts fallback:', e);
@@ -1009,8 +1003,13 @@ export async function createProduct(
           updatedAt: data.updated_at,
         };
       }
-    } catch (e) {
-      console.warn('Supabase createProduct fallback:', e);
+      if (error) {
+        console.error('Supabase createProduct error:', error);
+        throw new Error(error.message || 'Database error creating product');
+      }
+    } catch (e: any) {
+      console.error('Supabase createProduct exception:', e);
+      throw e;
     }
   }
 
@@ -1098,8 +1097,11 @@ export async function deleteProduct(id: string): Promise<boolean> {
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (!error) return true;
-    } catch (e) {
-      console.warn('Supabase deleteProduct fallback:', e);
+      console.error('Supabase deleteProduct error:', error);
+      throw new Error(error.message || 'Database error deleting product');
+    } catch (e: any) {
+      console.error('Supabase deleteProduct exception:', e);
+      throw e;
     }
   }
 
