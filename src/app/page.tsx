@@ -773,12 +773,30 @@ export default function Storefront() {
               DISCOVER OUR COLLECTION
             </button>
           </div>
-          <div className="story-photo">
+          <div
+            className="story-photo"
+            style={{
+              background: 'radial-gradient(circle at center, #ffffff 0%, #fdf8f0 60%, #faeee0 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '16px',
+              border: '1px solid #ebd9c3',
+              boxShadow: '0 12px 32px rgba(87,6,6,0.08)',
+              overflow: 'hidden',
+            }}
+          >
             <img
-              src="https://images.unsplash.com/photo-1604881988758-f76ad2f7?auto=format&fit=crop&w=1100&q=85"
-              alt="Crochet yarn and handmade craft"
-              onError={e => {
-                (e.target as HTMLImageElement).style.display = 'none';
+              src="/images/brand_logo.png"
+              alt="Dhaga Diaries - Handmade with love"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                padding: '30px 30px 60px 30px',
+                filter: 'drop-shadow(0 10px 24px rgba(87,6,6,0.12))',
               }}
             />
             <div className="photo-note">Slow-made · Heart-loved · One of a kind</div>

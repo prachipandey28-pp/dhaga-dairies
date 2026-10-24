@@ -915,20 +915,24 @@ export default function AdminDashboard() {
           <div style={{ textAlign: 'center', marginBottom: '22px' }}>
             <div
               style={{
-                width: '64px',
-                height: '64px',
+                width: '68px',
+                height: '68px',
                 borderRadius: '50%',
-                background: '#570606',
-                color: '#e4c178',
+                background: '#fff',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '28px',
                 marginBottom: '12px',
                 border: '2px solid #d8b66d',
+                overflow: 'hidden',
+                boxShadow: '0 4px 12px rgba(87,6,6,0.15)',
               }}
             >
-              🧶
+              <img
+                src="/images/brand_logo.png"
+                alt="Dhaga Diaries Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
             <h2 style={{ fontFamily: 'Georgia, serif', color: '#570606', fontSize: '24px', margin: '4px 0' }}>
               Dhaga Diaries Admin
@@ -1095,7 +1099,18 @@ export default function AdminDashboard() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '24px' }}>🧶</span>
+          <img
+            src="/images/brand_logo.png"
+            alt="Dhaga Diaries Logo"
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              border: '1.5px solid #d8b66d',
+              background: '#fff',
+              objectFit: 'contain',
+            }}
+          />
           <div>
             <strong style={{ fontFamily: 'Georgia, serif', fontSize: '18px', color: '#e4c178' }}>
               Dhaga Diaries
