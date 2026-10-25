@@ -50,6 +50,7 @@ export default function AdminDashboard() {
   const [productCategoryFilter, setProductCategoryFilter] = useState('All');
   const [productStockFilter, setProductStockFilter] = useState('All');
   const [productSortBy, setProductSortBy] = useState('newest');
+  const [productViewMode, setProductViewMode] = useState<'table' | 'cards'>('table');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '',
@@ -1474,7 +1475,7 @@ export default function AdminDashboard() {
             )}
 
             {/* Recent Orders & Quick Actions */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '20px' }}>
               <div
                 style={{
                   background: '#ffffff',
@@ -1503,57 +1504,59 @@ export default function AdminDashboard() {
                 </div>
 
                 {orders.length === 0 ? (
-                  <p style={{ color: 'var(--muted)', fontSize: '13px' }}>No orders placed yet.</p>
+                  <p style={{ color: '#78655e', fontSize: '13px' }}>No orders placed yet.</p>
                 ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #e8d9c7', color: 'var(--muted)', textAlign: 'left' }}>
-                        <th style={{ padding: '8px 0' }}>Order #</th>
-                        <th style={{ padding: '8px 0' }}>Customer</th>
-                        <th style={{ padding: '8px 0' }}>Items</th>
-                        <th style={{ padding: '8px 0' }}>Total</th>
-                        <th style={{ padding: '8px 0' }}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.slice(0, 5).map(o => (
-                        <tr key={o.id} style={{ borderBottom: '1px solid #f5ede2' }}>
-                          <td style={{ padding: '10px 0', fontWeight: 600, color: '#570606' }}>
-                            {o.orderNumber}
-                          </td>
-                          <td style={{ padding: '10px 0' }}>{o.customerName}</td>
-                          <td style={{ padding: '10px 0', color: 'var(--muted)' }}>
-                            {o.items?.length || 0} items
-                          </td>
-                          <td style={{ padding: '10px 0', fontWeight: 600 }}>{rupees(o.total)}</td>
-                          <td style={{ padding: '10px 0' }}>
-                            <span
-                              style={{
-                                padding: '3px 8px',
-                                borderRadius: '999px',
-                                fontSize: '11px',
-                                fontWeight: 600,
-                                background:
-                                  o.orderStatus === 'Delivered'
-                                    ? '#dcfce7'
-                                    : o.orderStatus === 'Cancelled'
-                                    ? '#fee2e2'
-                                    : '#fef3c7',
-                                color:
-                                  o.orderStatus === 'Delivered'
-                                    ? '#15803d'
-                                    : o.orderStatus === 'Cancelled'
-                                    ? '#b91c1c'
-                                    : '#b45309',
-                              }}
-                            >
-                              {o.orderStatus}
-                            </span>
-                          </td>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table style={{ width: '100%', minWidth: '540px', borderCollapse: 'collapse', fontSize: '13px', color: '#3d2522' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #e8d9c7', color: '#570606', textAlign: 'left' }}>
+                          <th style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>Order #</th>
+                          <th style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>Customer</th>
+                          <th style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>Items</th>
+                          <th style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>Total</th>
+                          <th style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {orders.slice(0, 5).map(o => (
+                          <tr key={o.id} style={{ borderBottom: '1px solid #f5ede2' }}>
+                            <td style={{ padding: '10px 8px', fontWeight: 600, color: '#570606', whiteSpace: 'nowrap' }}>
+                              {o.orderNumber}
+                            </td>
+                            <td style={{ padding: '10px 8px', color: '#3d2522', fontWeight: 500 }}>{o.customerName}</td>
+                            <td style={{ padding: '10px 8px', color: '#78655e' }}>
+                              {o.items?.length || 0} items
+                            </td>
+                            <td style={{ padding: '10px 8px', fontWeight: 700, color: '#570606' }}>{rupees(o.total)}</td>
+                            <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
+                              <span
+                                style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '999px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  background:
+                                    o.orderStatus === 'Delivered'
+                                      ? '#dcfce7'
+                                      : o.orderStatus === 'Cancelled'
+                                      ? '#fee2e2'
+                                      : '#fef3c7',
+                                  color:
+                                    o.orderStatus === 'Delivered'
+                                      ? '#15803d'
+                                      : o.orderStatus === 'Cancelled'
+                                      ? '#b91c1c'
+                                      : '#b45309',
+                                }}
+                              >
+                                {o.orderStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
 
@@ -1663,7 +1666,7 @@ export default function AdminDashboard() {
         {/* ========================================================================= */}
         {activeTab === 'products' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '14px' }}>
               <div>
                 <h2 style={{ fontFamily: 'Georgia, serif', color: '#f7dfb8', margin: 0, fontSize: '26px', fontWeight: 600, textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
                   Product Catalog
@@ -1673,11 +1676,11 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   onClick={handleExportCsv}
                   style={{
-                    padding: '9px 16px',
+                    padding: '8px 14px',
                     borderRadius: '999px',
                     background: '#ffffff',
                     border: '1px solid #d8b66d',
@@ -1692,7 +1695,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={() => setIsCsvModalOpen(true)}
                   style={{
-                    padding: '9px 16px',
+                    padding: '8px 14px',
                     borderRadius: '999px',
                     background: '#ffffff',
                     border: '1px solid #d8b66d',
@@ -1710,7 +1713,7 @@ export default function AdminDashboard() {
                     resetProductForm();
                     setIsProductModalOpen(true);
                   }}
-                  style={{ background: '#570606', color: '#fff5e8', fontSize: '13px', padding: '10px 20px' }}
+                  style={{ background: '#570606', color: '#fff5e8', fontSize: '13px', padding: '9px 18px', borderRadius: '999px' }}
                 >
                   + Add Product
                 </button>
@@ -1739,8 +1742,9 @@ export default function AdminDashboard() {
                   padding: '8px 14px',
                   borderRadius: '999px',
                   border: '1px solid #e8d9c7',
-                  minWidth: '220px',
+                  minWidth: '200px',
                   fontSize: '13px',
+                  color: '#3d2522',
                 }}
               />
 
@@ -1752,6 +1756,7 @@ export default function AdminDashboard() {
                   borderRadius: '999px',
                   border: '1px solid #e8d9c7',
                   fontSize: '13px',
+                  color: '#3d2522',
                 }}
               >
                 <option value="All">All Categories</option>
@@ -1770,6 +1775,7 @@ export default function AdminDashboard() {
                   borderRadius: '999px',
                   border: '1px solid #e8d9c7',
                   fontSize: '13px',
+                  color: '#3d2522',
                 }}
               >
                 <option value="All">All Stock Levels</option>
@@ -1786,6 +1792,7 @@ export default function AdminDashboard() {
                   borderRadius: '999px',
                   border: '1px solid #e8d9c7',
                   fontSize: '13px',
+                  color: '#3d2522',
                 }}
               >
                 <option value="newest">Sort: Newest First</option>
@@ -1794,136 +1801,362 @@ export default function AdminDashboard() {
                 <option value="stock-low">Stock: Low to High</option>
               </select>
 
-              <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--muted)' }}>
+              {/* View Switcher: Table or Cards */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setProductViewMode('table')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #d8b66d',
+                    background: productViewMode === 'table' ? '#570606' : '#ffffff',
+                    color: productViewMode === 'table' ? '#ffffff' : '#570606',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📋 Table
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProductViewMode('cards')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #d8b66d',
+                    background: productViewMode === 'cards' ? '#570606' : '#ffffff',
+                    color: productViewMode === 'cards' ? '#ffffff' : '#570606',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📱 Mobile Cards
+                </button>
+              </div>
+
+              <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#78655e', fontWeight: 500 }}>
                 Showing {filteredProducts.length} of {products.length} products
               </span>
             </div>
 
-            {/* Products Table */}
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '12px',
-                border: '1px solid #e8d9c7',
-                overflow: 'hidden',
-              }}
-            >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: '#f8f3eb', borderBottom: '1px solid #e8d9c7', textAlign: 'left', color: '#570606' }}>
-                    <th style={{ padding: '12px 16px' }}>Image</th>
-                    <th style={{ padding: '12px 16px' }}>Product</th>
-                    <th style={{ padding: '12px 16px' }}>Category</th>
-                    <th style={{ padding: '12px 16px' }}>SKU</th>
-                    <th style={{ padding: '12px 16px' }}>Price</th>
-                    <th style={{ padding: '12px 16px' }}>Stock</th>
-                    <th style={{ padding: '12px 16px' }}>Status</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map(p => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #f2e6d9' }}>
-                      <td style={{ padding: '12px 16px', width: '60px' }}>
-                        <img
-                          src={p.image || '/images/brand_logo.png'}
-                          alt={p.name}
-                          style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <strong style={{ color: '#570606', display: 'block' }}>{p.name}</strong>
-                        <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
-                          {p.tag} · {p.emoji}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ background: '#f5ede2', padding: '3px 8px', borderRadius: '4px', fontSize: '11px' }}>
-                          {p.category}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: '12px' }}>
-                        {p.sku}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {p.salePrice ? (
-                          <div>
-                            <strong style={{ color: '#570606' }}>{rupees(p.salePrice)}</strong>
-                            <small style={{ textDecoration: 'line-through', marginLeft: '6px', color: 'var(--muted)' }}>
+            {/* Products Table View */}
+            {productViewMode === 'table' ? (
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '12px',
+                  border: '1px solid #e8d9c7',
+                  overflowX: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                }}
+              >
+                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', fontSize: '13px', color: '#3d2522' }}>
+                  <thead>
+                    <tr style={{ background: '#f8f3eb', borderBottom: '1px solid #e8d9c7', textAlign: 'left', color: '#570606' }}>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Image</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Product</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Category</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>SKU</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Price</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Stock</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map(p => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid #f2e6d9' }}>
+                        <td style={{ padding: '12px 16px', width: '60px' }}>
+                          <img
+                            src={p.image || '/images/brand_logo.png'}
+                            alt={p.name}
+                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e8d9c7' }}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <strong style={{ color: '#570606', display: 'block', fontSize: '14px' }}>{p.name}</strong>
+                          <span style={{ fontSize: '11px', color: '#78655e' }}>
+                            {p.tag} · {p.emoji}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span
+                            className="admin-badge-category"
+                            style={{
+                              background: '#fdf6ec',
+                              color: '#570606',
+                              border: '1px solid #d8b66d',
+                              fontWeight: 700,
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              display: 'inline-block',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {p.category || 'Accessories'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span
+                            className="admin-badge-sku"
+                            style={{
+                              background: '#f1f5f9',
+                              color: '#0f172a',
+                              border: '1px solid #cbd5e1',
+                              fontFamily: 'monospace',
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              letterSpacing: '0.04em',
+                              display: 'inline-block',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {p.sku || '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {p.salePrice ? (
+                            <div>
+                              <strong style={{ color: '#570606', fontSize: '14px' }}>{rupees(p.salePrice)}</strong>
+                              <small style={{ textDecoration: 'line-through', marginLeft: '6px', color: '#78655e' }}>
+                                {rupees(p.price)}
+                              </small>
+                            </div>
+                          ) : (
+                            <strong style={{ color: '#570606', fontSize: '14px' }}>{rupees(p.price)}</strong>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: '999px',
+                              fontSize: '11px',
+                              background: p.stock <= 0 ? '#fee2e2' : p.stock <= 3 ? '#fef3c7' : '#dcfce7',
+                              color: p.stock <= 0 ? '#b91c1c' : p.stock <= 3 ? '#b45309' : '#15803d',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {p.stock <= 0 ? 'Out of Stock' : `${p.stock} units`}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <button
+                            onClick={() => handleTogglePublishProduct(p)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              border: 'none',
+                              cursor: 'pointer',
+                              background: p.isPublished ? '#dcfce7' : '#e5e7eb',
+                              color: p.isPublished ? '#15803d' : '#6b7280',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {p.isPublished ? '● Published' : '○ Draft (Hidden)'}
+                          </button>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button
+                            onClick={() => handleEditProduct(p)}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #d8b66d',
+                              background: '#ffffff',
+                              color: '#570606',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              marginRight: '6px',
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(p.id, p.name)}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #fecaca',
+                              background: '#fff5f5',
+                              color: '#b91c1c',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Mobile Friendly Card Grid View */
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '14px' }}>
+                {filteredProducts.map(p => (
+                  <div
+                    key={p.id}
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: '12px',
+                      border: '1px solid #e8d9c7',
+                      padding: '16px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                    }}
+                  >
+                    {/* Top: Image, Name, Price */}
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <img
+                        src={p.image || '/images/brand_logo.png'}
+                        alt={p.name}
+                        style={{
+                          width: '58px',
+                          height: '58px',
+                          objectFit: 'cover',
+                          borderRadius: '8px',
+                          border: '1px solid #e8d9c7',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                          <strong style={{ color: '#570606', fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.name}
+                          </strong>
+                          <span style={{ fontSize: '11px', color: '#78655e', flexShrink: 0 }}>
+                            {p.tag} · {p.emoji}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                          <strong style={{ color: '#570606', fontSize: '16px' }}>
+                            {p.salePrice ? rupees(p.salePrice) : rupees(p.price)}
+                          </strong>
+                          {p.salePrice && (
+                            <small style={{ textDecoration: 'line-through', color: '#85746b', fontSize: '12px' }}>
                               {rupees(p.price)}
                             </small>
-                          </div>
-                        ) : (
-                          <strong style={{ color: '#570606' }}>{rupees(p.price)}</strong>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            padding: '3px 8px',
-                            borderRadius: '999px',
-                            fontSize: '11px',
-                            background: p.stock <= 0 ? '#fee2e2' : p.stock <= 3 ? '#fef3c7' : '#dcfce7',
-                            color: p.stock <= 0 ? '#b91c1c' : p.stock <= 3 ? '#b45309' : '#15803d',
-                          }}
-                        >
-                          {p.stock <= 0 ? 'Out of Stock' : `${p.stock} units`}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <button
-                          onClick={() => handleTogglePublishProduct(p)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '999px',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            border: 'none',
-                            cursor: 'pointer',
-                            background: p.isPublished ? '#dcfce7' : '#e5e7eb',
-                            color: p.isPublished ? '#15803d' : '#6b7280',
-                          }}
-                        >
-                          {p.isPublished ? '● Published' : '○ Draft (Hidden)'}
-                        </button>
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleEditProduct(p)}
-                          style={{
-                            padding: '5px 12px',
-                            borderRadius: '6px',
-                            border: '1px solid #d8b66d',
-                            background: '#ffffff',
-                            color: '#570606',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            marginRight: '6px',
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(p.id, p.name)}
-                          style={{
-                            padding: '5px 12px',
-                            borderRadius: '6px',
-                            border: '1px solid #fecaca',
-                            background: '#fff5f5',
-                            color: '#b91c1c',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Badges Row: Category, SKU, Stock, Publish status */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                      <span
+                        className="admin-badge-category"
+                        style={{
+                          background: '#fdf6ec',
+                          color: '#570606',
+                          border: '1px solid #d8b66d',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '5px',
+                          fontSize: '11px',
+                        }}
+                      >
+                        📁 {p.category || 'Accessories'}
+                      </span>
+                      <span
+                        className="admin-badge-sku"
+                        style={{
+                          background: '#f1f5f9',
+                          color: '#0f172a',
+                          border: '1px solid #cbd5e1',
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                        }}
+                      >
+                        SKU: {p.sku || '—'}
+                      </span>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          background: p.stock <= 0 ? '#fee2e2' : p.stock <= 3 ? '#fef3c7' : '#dcfce7',
+                          color: p.stock <= 0 ? '#b91c1c' : p.stock <= 3 ? '#b45309' : '#15803d',
+                        }}
+                      >
+                        {p.stock <= 0 ? 'Out of Stock' : `${p.stock} units`}
+                      </span>
+                      <button
+                        onClick={() => handleTogglePublishProduct(p)}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: p.isPublished ? '#dcfce7' : '#e5e7eb',
+                          color: p.isPublished ? '#15803d' : '#6b7280',
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        {p.isPublished ? '● Published' : '○ Draft'}
+                      </button>
+                    </div>
+
+                    {/* Actions Row: Edit & Delete buttons */}
+                    <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #f2e6d9', paddingTop: '10px' }}>
+                      <button
+                        onClick={() => handleEditProduct(p)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: '1px solid #d8b66d',
+                          background: '#ffffff',
+                          color: '#570606',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(p.id, p.name)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: '1px solid #fecaca',
+                          background: '#fff5f5',
+                          color: '#b91c1c',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2235,19 +2468,20 @@ export default function AdminDashboard() {
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1px solid #e8d9c7',
-                  overflow: 'hidden',
+                  overflowX: 'auto',
+                  WebkitOverflowScrolling: 'touch',
                 }}
               >
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <table style={{ width: '100%', minWidth: '720px', borderCollapse: 'collapse', fontSize: '13px', color: '#3d2522' }}>
                   <thead>
                     <tr style={{ background: '#f8f3eb', borderBottom: '1px solid #e8d9c7', textAlign: 'left', color: '#570606' }}>
-                      <th style={{ padding: '12px 16px' }}>Coupon Code</th>
-                      <th style={{ padding: '12px 16px' }}>Discount</th>
-                      <th style={{ padding: '12px 16px' }}>Min Order</th>
-                      <th style={{ padding: '12px 16px' }}>Usage</th>
-                      <th style={{ padding: '12px 16px' }}>Scope</th>
-                      <th style={{ padding: '12px 16px' }}>Status</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Coupon Code</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Discount</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Min Order</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Usage</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Scope</th>
+                      <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2416,19 +2650,21 @@ export default function AdminDashboard() {
                 background: '#ffffff',
                 borderRadius: '12px',
                 border: '1px solid #e8d9c7',
-                overflow: 'hidden',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
               }}
             >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', fontSize: '13px', color: '#3d2522' }}>
                 <thead>
                   <tr style={{ background: '#f8f3eb', borderBottom: '1px solid #e8d9c7', textAlign: 'left', color: '#570606' }}>
-                    <th style={{ padding: '12px 16px' }}>Order #</th>
-                    <th style={{ padding: '12px 16px' }}>Date</th>
-                    <th style={{ padding: '12px 16px' }}>Customer Details</th>
-                    <th style={{ padding: '12px 16px' }}>Total Amount</th>
-                    <th style={{ padding: '12px 16px' }}>Payment</th>
-                    <th style={{ padding: '12px 16px' }}>Order Status</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Order #</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Date</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Customer Details</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Total Amount</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Payment</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Order Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2552,18 +2788,20 @@ export default function AdminDashboard() {
                 background: '#ffffff',
                 borderRadius: '12px',
                 border: '1px solid #e8d9c7',
-                overflow: 'hidden',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
               }}
             >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', fontSize: '13px', color: '#3d2522' }}>
                 <thead>
                   <tr style={{ background: '#f8f3eb', borderBottom: '1px solid #e8d9c7', textAlign: 'left', color: '#570606' }}>
-                    <th style={{ padding: '12px 16px' }}>Customer Name</th>
-                    <th style={{ padding: '12px 16px' }}>Email & Phone</th>
-                    <th style={{ padding: '12px 16px' }}>City, State</th>
-                    <th style={{ padding: '12px 16px' }}>Total Orders</th>
-                    <th style={{ padding: '12px 16px' }}>Lifetime Value (Spend)</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Customer Name</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Email & Phone</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>City, State</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Total Orders</th>
+                    <th style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>Lifetime Value (Spend)</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2794,7 +3032,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
       {/* ========================================================================= */}
       {isProductModalOpen && (
         <div className="overlay" style={{ display: 'flex', zIndex: 1000 }}>
-          <div className="modal" style={{ maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal" style={{ maxWidth: '640px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modalhead">
               <h2>{editingProductId ? 'Edit Product' : 'Add New Product'}</h2>
               <button className="close" onClick={() => setIsProductModalOpen(false)}>
@@ -2813,7 +3051,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
                 <div className="field">
                   <label>Category *</label>
                   <select
@@ -2838,7 +3076,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '12px' }}>
                 <div className="field">
                   <label>Regular Price (₹) *</label>
                   <input
@@ -2954,7 +3192,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
                 <div className="field">
                   <label>Tag Badge</label>
                   <select
@@ -2983,6 +3221,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
                 style={{
                   display: 'flex',
                   gap: '16px',
+                  flexWrap: 'wrap',
                   margin: '14px 0',
                   padding: '12px',
                   background: '#f8f3eb',
