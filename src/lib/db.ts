@@ -41,11 +41,26 @@ const DATA_DIR = IS_SERVERLESS
   : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'store.json');
 
+export const DEMO_PRODUCT_IDS = new Set([
+  'prod_daisy_tote',
+  'prod_sunflower_stem',
+  'prod_boba_bear',
+  'prod_cherry_scrunchie',
+  'prod_lavender_bouquet',
+  'prod_lavender_whisper',
+  'prod_strawberry_pouch',
+]);
+
 let inMemoryDb: DatabaseSchema | null = null;
 
 // Ensure local JSON DB file exists for local development/fallback
 function ensureDb(): DatabaseSchema {
-  if (inMemoryDb) return inMemoryDb;
+  if (inMemoryDb) {
+    if (inMemoryDb.products) {
+      inMemoryDb.products = inMemoryDb.products.filter(p => !DEMO_PRODUCT_IDS.has(p.id));
+    }
+    return inMemoryDb;
+  }
 
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -53,7 +68,23 @@ function ensureDb(): DatabaseSchema {
     }
 
     if (!fs.existsSync(DB_FILE)) {
-      const initialData = getInitialSeed();
+      // First try to load from the committed data/store.json in repo!
+      const repoStorePath = path.join(process.cwd(), 'data', 'store.json');
+      let initialData: DatabaseSchema;
+      if (fs.existsSync(repoStorePath)) {
+        try {
+          initialData = JSON.parse(fs.readFileSync(repoStorePath, 'utf8'));
+        } catch {
+          initialData = getInitialSeed();
+        }
+      } else {
+        initialData = getInitialSeed();
+      }
+
+      if (initialData.products) {
+        initialData.products = initialData.products.filter(p => !DEMO_PRODUCT_IDS.has(p.id));
+      }
+
       try {
         fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
       } catch {
@@ -66,6 +97,15 @@ function ensureDb(): DatabaseSchema {
     const raw = fs.readFileSync(DB_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     let changed = false;
+
+    // Remove any demo products if present
+    if (parsed.products && Array.isArray(parsed.products)) {
+      const origLen = parsed.products.length;
+      parsed.products = parsed.products.filter((p: Product) => !DEMO_PRODUCT_IDS.has(p.id));
+      if (parsed.products.length !== origLen) {
+        changed = true;
+      }
+    }
 
     // Migrate fields if missing in legacy store.json
     if (!parsed.categories || parsed.categories.length === 0) {
@@ -81,7 +121,7 @@ function ensureDb(): DatabaseSchema {
       changed = true;
     }
     if (!parsed.variants) {
-      parsed.variants = getInitialSeed().variants;
+      parsed.variants = [];
       changed = true;
     }
 
@@ -97,13 +137,28 @@ function ensureDb(): DatabaseSchema {
   } catch (err) {
     console.warn('Fallback to in-memory database:', err);
     if (!inMemoryDb) {
-      inMemoryDb = getInitialSeed();
+      const repoStorePath = path.join(process.cwd(), 'data', 'store.json');
+      if (fs.existsSync(repoStorePath)) {
+        try {
+          inMemoryDb = JSON.parse(fs.readFileSync(repoStorePath, 'utf8'));
+        } catch {
+          inMemoryDb = getInitialSeed();
+        }
+      } else {
+        inMemoryDb = getInitialSeed();
+      }
     }
-    return inMemoryDb;
+    if (inMemoryDb && inMemoryDb.products) {
+      inMemoryDb.products = inMemoryDb.products.filter(p => !DEMO_PRODUCT_IDS.has(p.id));
+    }
+    return inMemoryDb!;
   }
 }
 
 function saveDb(data: DatabaseSchema): void {
+  if (data.products) {
+    data.products = data.products.filter(p => !DEMO_PRODUCT_IDS.has(p.id));
+  }
   inMemoryDb = data;
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -114,6 +169,16 @@ function saveDb(data: DatabaseSchema): void {
     fs.renameSync(tempFile, DB_FILE);
   } catch (err) {
     console.warn('Could not write to disk on serverless, retained in memory:', err);
+  }
+
+  // Also write to project data/store.json if writable (local dev environment)
+  try {
+    const localStorePath = path.join(process.cwd(), 'data', 'store.json');
+    if (localStorePath !== DB_FILE && fs.existsSync(path.dirname(localStorePath))) {
+      fs.writeFileSync(localStorePath, JSON.stringify(data, null, 2), 'utf8');
+    }
+  } catch {
+    // ignore
   }
 }
 
@@ -189,184 +254,201 @@ function getInitialSeed(): DatabaseSchema {
 
   const products: Product[] = [
     {
-      id: 'prod_daisy_tote',
-      name: 'Daisy Dream Tote',
-      slug: 'daisy-dream-tote',
-      category: 'Bags',
-      price: 1299,
-      salePrice: 1199,
-      stock: 8,
-      sku: 'BAG-DD-01',
-      desc: 'A cheerful everyday bag, stitched slowly by hand with soft milk-cotton yarn. Features sturdy reinforced handles and signature floral motif.',
-      image: 'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=700&q=80',
+      id: 'prod_1792853665720_wls8',
+      name: 'Tulip clip',
+      slug: 'tulip-clip-5720',
+      category: 'Accessories',
+      price: 70,
+      salePrice: null,
+      stock: 49,
+      sku: 'clip-01',
+      desc: 'Handmade crochet tulip hair clip with soft pastel yarn and secure metal clasp.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg',
       images: [
-        'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=700&q=80',
-        'https://images.unsplash.com/photo-1638427291164-b4adea2f7b96?auto=format&fit=crop&w=900&q=85',
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg',
       ],
-      emoji: '👜',
-      tag: 'BESTSELLER',
-      isPublished: true,
-      isFeatured: true,
-      isBestseller: true,
-      isNewArrival: false,
-      createdAt: '2026-01-10T10:00:00Z',
-      updatedAt: '2026-01-10T10:00:00Z',
-    },
-    {
-      id: 'prod_sunflower_stem',
-      name: 'Sunflower Stem Keepsake',
-      slug: 'sunflower-stem-keepsake',
-      category: 'Flowers',
-      price: 349,
-      salePrice: 299,
-      stock: 15,
-      sku: 'FLW-SF-02',
-      desc: 'Bright wool sunflowers made to sit quietly in vintage bottles on sunny desks. A gift of eternal warmth that never loses its petals.',
-      image: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=700&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=700&q=80',
-      ],
-      emoji: '🌸',
+      emoji: '🌷',
       tag: 'HANDMADE',
-      isPublished: true,
-      isFeatured: true,
-      isBestseller: false,
-      isNewArrival: false,
-      createdAt: '2026-01-12T10:00:00Z',
-      updatedAt: '2026-01-12T10:00:00Z',
-    },
-    {
-      id: 'prod_boba_bear',
-      name: 'Boba Bear Plushie',
-      slug: 'boba-bear-plushie',
-      category: 'Plushies',
-      price: 899,
-      salePrice: 799,
-      stock: 5,
-      sku: 'PLS-BB-03',
-      desc: 'Pocket-sized palm comfort, holding a tiny pearl cup for slow tea afternoons. Hand-stitched with hypoallergenic velvet yarn.',
-      image: 'https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=700&q=80',
-      images: [
-        'https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=700&q=80',
-      ],
-      emoji: '🧸',
-      tag: 'NEW ARRIVAL',
       isPublished: true,
       isFeatured: true,
       isBestseller: false,
       isNewArrival: true,
-      createdAt: '2026-01-15T10:00:00Z',
-      updatedAt: '2026-01-15T10:00:00Z',
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:54:25.724Z',
+      updatedAt: '2026-10-24T15:06:06.111Z',
     },
     {
-      id: 'prod_cherry_scrunchie',
-      name: 'Cherry Blossom Scrunchie',
-      slug: 'cherry-blossom-scrunchie',
+      id: 'prod_1792853594871_1wxk',
+      name: 'Flower Clip',
+      slug: 'flower-clip-4871',
       category: 'Accessories',
-      price: 249,
-      salePrice: 199,
-      stock: 22,
-      sku: 'ACC-CB-04',
-      desc: 'Gentle on locks, spun in antique ivory and rose-petal stitches. Elastic core reinforced with double-twisted soft yarn.',
-      image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=700&q=80',
+      price: 100,
+      salePrice: null,
+      stock: 8,
+      sku: 'clip-02',
+      desc: 'Charming crochet blossom hair clip, handcrafted with premium milk-cotton yarn.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM_1792853585793.jpeg',
       images: [
-        'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=700&q=80',
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM_1792853585793.jpeg',
       ],
-      emoji: '✨',
+      emoji: '🌸',
+      tag: 'BESTSELLER',
+      isPublished: true,
+      isFeatured: true,
+      isBestseller: true,
+      isNewArrival: false,
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:53:14.875Z',
+      updatedAt: '2026-10-24T14:53:14.875Z',
+    },
+    {
+      id: 'prod_1792853398906_vl07',
+      name: 'Rose Tulip',
+      slug: 'rose-tulip-8905',
+      category: 'Accessories',
+      price: 200,
+      salePrice: null,
+      stock: 8,
+      sku: 'rose-03',
+      desc: 'Elegant handcrafted crochet rose tulip accessory, woven with vibrant yarn.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM__1__1792853378700.jpeg',
+      images: [
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM__1__1792853378700.jpeg',
+      ],
+      emoji: '🌹',
       tag: 'HANDMADE',
       isPublished: true,
       isFeatured: false,
       isBestseller: false,
       isNewArrival: false,
-      createdAt: '2026-01-18T10:00:00Z',
-      updatedAt: '2026-01-18T10:00:00Z',
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:49:58.908Z',
+      updatedAt: '2026-10-24T14:49:58.908Z',
     },
     {
-      id: 'prod_lavender_bouquet',
-      name: 'Lavender Whisper Bouquet',
-      slug: 'lavender-whisper-bouquet',
+      id: 'prod_1792853318503_zeld',
+      name: 'Rose & Heart Bouquet',
+      slug: 'rose-n-heart-bouquet-8503',
       category: 'Flowers',
-      price: 649,
-      salePrice: 549,
+      price: 400,
+      salePrice: null,
       stock: 10,
-      sku: 'FLW-LV-05',
-      desc: 'Five delicate lavender sprigs bound with natural jute ribbon. Infused with subtle calming lavender essential oils.',
-      image: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=700&q=80',
+      sku: 'bouquet-04',
+      desc: 'Everlasting crochet floral bouquet featuring lovingly stitched roses and cute crochet hearts.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM_1792853292409.jpeg',
       images: [
-        'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=700&q=80',
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM_1792853292409.jpeg',
+      ],
+      emoji: '💐',
+      tag: 'HANDMADE',
+      isPublished: true,
+      isFeatured: true,
+      isBestseller: false,
+      isNewArrival: true,
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:48:38.507Z',
+      updatedAt: '2026-10-24T14:48:38.507Z',
+    },
+    {
+      id: 'prod_1792853211799_xome',
+      name: 'Simple Gajra',
+      slug: 'simpal-gajra-1799',
+      category: 'Accessories',
+      price: 300,
+      salePrice: 250,
+      stock: 50,
+      sku: 'gajra-05',
+      desc: 'Traditional hair gajra handcrafted with white & yellow wool buds, reusable and evergreen.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM__1__1792853192777.jpeg',
+      images: [
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM__1__1792853192777.jpeg',
+      ],
+      emoji: '🌼',
+      tag: 'NEW ARRIVAL',
+      isPublished: true,
+      isFeatured: false,
+      isBestseller: false,
+      isNewArrival: true,
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:46:51.802Z',
+      updatedAt: '2026-10-24T14:47:05.566Z',
+    },
+    {
+      id: 'prod_1792852337558_cvd3',
+      name: 'Chaffa Keychain',
+      slug: 'chaffa-keychain-7558',
+      category: 'Plushies',
+      price: 200,
+      salePrice: 200,
+      stock: 8,
+      sku: 'keychain-06',
+      desc: 'Delicate frangipani / chaffa flower keychain hand-crocheted with soft yellow & cream yarn.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM_1792852319508.jpeg',
+      images: [
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM_1792852319508.jpeg',
       ],
       emoji: '🌸',
       tag: 'LIMITED EDITION',
       isPublished: true,
+      isFeatured: false,
+      isBestseller: false,
+      isNewArrival: false,
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:32:17.562Z',
+      updatedAt: '2026-10-24T14:32:17.562Z',
+    },
+    {
+      id: 'prod_1792852236419_f9s5',
+      name: 'Claw Clips',
+      slug: 'claw-clips-6419',
+      category: 'Accessories',
+      price: 200,
+      salePrice: 200,
+      stock: 8,
+      sku: 'clips-07',
+      desc: 'Sturdy hair claw clips adorned with handcrafted crochet flowers and cute leaf detailing.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_34_59_PM__1__1792852208739.jpeg',
+      images: [
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_38_20_PM_1792852179457.jpeg',
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_34_59_PM__1__1792852208739.jpeg',
+      ],
+      emoji: '🎀',
+      tag: 'BESTSELLER',
+      isPublished: true,
       isFeatured: true,
       isBestseller: true,
       isNewArrival: false,
-      createdAt: '2026-01-20T10:00:00Z',
-      updatedAt: '2026-01-20T10:00:00Z',
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:30:36.422Z',
+      updatedAt: '2026-10-24T14:30:36.422Z',
     },
     {
-      id: 'prod_strawberry_pouch',
-      name: 'Strawberry Sweetheart Pouch',
-      slug: 'strawberry-sweetheart-pouch',
-      category: 'Bags',
-      price: 799,
-      salePrice: 699,
-      stock: 6,
-      sku: 'BAG-SB-06',
-      desc: 'A compact drawstring bag in vibrant strawberry red with tiny white seed embroidery and leafy green ties.',
-      image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=700&q=80',
+      id: 'prod_1792851455888_4y6w',
+      name: 'Rubberbands',
+      slug: 'rubberbands-5888',
+      category: 'Accessories',
+      price: 60,
+      salePrice: 60,
+      stock: 25,
+      sku: 'rubber-08',
+      desc: 'Gentle crochet hair scrunchies and rubber bands that protect hair and prevent breakage.',
+      image: '/uploads/WhatsApp_Image_2026-10-11_at_5_38_20_PM_1792851412264.jpeg',
       images: [
-        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=700&q=80',
+        '/uploads/WhatsApp_Image_2026-10-11_at_5_38_20_PM_1792851412264.jpeg',
       ],
-      emoji: '👜',
-      tag: 'BESTSELLER',
+      emoji: '🎀',
+      tag: 'HANDMADE',
       isPublished: true,
       isFeatured: false,
-      isBestseller: true,
+      isBestseller: false,
       isNewArrival: false,
-      createdAt: '2026-01-22T10:00:00Z',
-      updatedAt: '2026-01-22T10:00:00Z',
+      scheduledLaunchAt: null,
+      createdAt: '2026-10-24T14:17:35.892Z',
+      updatedAt: '2026-10-24T14:17:35.892Z',
     },
   ];
 
-  const variants: ProductVariant[] = [
-    {
-      id: 'var_daisy_pink',
-      productId: 'prod_daisy_tote',
-      title: 'Pastel Pink',
-      sku: 'BAG-DD-01-PNK',
-      price: 1299,
-      stock: 4,
-      createdAt: '2026-01-10T10:00:00Z',
-    },
-    {
-      id: 'var_daisy_cream',
-      productId: 'prod_daisy_tote',
-      title: 'Classic Cream',
-      sku: 'BAG-DD-01-CRM',
-      price: 1299,
-      stock: 4,
-      createdAt: '2026-01-10T10:00:00Z',
-    },
-    {
-      id: 'var_sun_yellow',
-      productId: 'prod_sunflower_stem',
-      title: 'Sun Yellow',
-      sku: 'FLW-SF-02-YEL',
-      price: 349,
-      stock: 10,
-      createdAt: '2026-01-12T10:00:00Z',
-    },
-    {
-      id: 'var_sun_amber',
-      productId: 'prod_sunflower_stem',
-      title: 'Amber Gold',
-      sku: 'FLW-SF-02-AMB',
-      price: 349,
-      stock: 5,
-      createdAt: '2026-01-12T10:00:00Z',
-    },
-  ];
+  const variants: ProductVariant[] = [];
 
   const collections: Collection[] = [
     {
@@ -810,29 +892,31 @@ export async function getProducts(options?: {
       }
 
       const { data, error } = await q;
-      if (!error && data) {
-        let list: Product[] = data.map(p => ({
-          id: p.id,
-          name: p.name,
-          slug: p.slug,
-          category: p.category,
-          price: Number(p.price),
-          salePrice: p.sale_price !== null ? Number(p.sale_price) : null,
-          stock: Number(p.stock),
-          sku: p.sku,
-          desc: p.description || '',
-          image: p.image,
-          images: Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []),
-          emoji: p.emoji || '🧶',
-          tag: p.tag || 'HANDMADE',
-          isPublished: p.is_published,
-          isFeatured: p.is_featured,
-          isBestseller: p.is_bestseller,
-          isNewArrival: p.is_new_arrival,
-          scheduledLaunchAt: p.scheduled_launch_at,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at,
-        }));
+      if (!error && data && data.length > 0) {
+        let list: Product[] = data
+          .filter(p => !DEMO_PRODUCT_IDS.has(p.id))
+          .map(p => ({
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            category: p.category,
+            price: Number(p.price),
+            salePrice: p.sale_price !== null ? Number(p.sale_price) : null,
+            stock: Number(p.stock),
+            sku: p.sku,
+            desc: p.description || '',
+            image: p.image,
+            images: Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []),
+            emoji: p.emoji || '🧶',
+            tag: p.tag || 'HANDMADE',
+            isPublished: p.is_published,
+            isFeatured: p.is_featured,
+            isBestseller: p.is_bestseller,
+            isNewArrival: p.is_new_arrival,
+            scheduledLaunchAt: p.scheduled_launch_at,
+            createdAt: p.created_at,
+            updatedAt: p.updated_at,
+          }));
 
         if (options?.query) {
           const search = options.query.toLowerCase();
@@ -843,10 +927,12 @@ export async function getProducts(options?: {
               p.sku.toLowerCase().includes(search)
           );
         }
-        return list;
+        if (list.length > 0) {
+          return list;
+        }
       }
       if (error) {
-        console.error('Supabase getProducts error:', error);
+        console.warn('Supabase getProducts warning:', error);
       }
     } catch (e) {
       console.warn('Supabase getProducts fallback:', e);
@@ -854,7 +940,7 @@ export async function getProducts(options?: {
   }
 
   const db = ensureDb();
-  let list = db.products;
+  let list = db.products.filter(p => !DEMO_PRODUCT_IDS.has(p.id));
 
   if (options?.onlyPublished) {
     const now = new Date().toISOString();
@@ -894,7 +980,7 @@ export async function getProductById(id: string): Promise<Product | null> {
         .or(`id.eq.${id},slug.eq.${id}`)
         .maybeSingle();
 
-      if (!error && data) {
+      if (!error && data && !DEMO_PRODUCT_IDS.has(data.id)) {
         return {
           id: data.id,
           name: data.name,
@@ -933,7 +1019,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 
   const db = ensureDb();
-  const prod = db.products.find(p => p.id === id || p.slug === id);
+  const prod = db.products.find(p => (p.id === id || p.slug === id) && !DEMO_PRODUCT_IDS.has(p.id));
   if (!prod) return null;
   return {
     ...prod,
@@ -951,6 +1037,15 @@ export async function createProduct(
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
   const id = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  let createdProduct: Product = {
+    ...product,
+    id,
+    slug,
+    createdAt: now,
+    updatedAt: now,
+  };
 
   const supabase = getSupabaseServerClient();
   if (supabase) {
@@ -981,7 +1076,7 @@ export async function createProduct(
         .single();
 
       if (!error && data) {
-        return {
+        createdProduct = {
           id: data.id,
           name: data.name,
           slug: data.slug,
@@ -1002,31 +1097,22 @@ export async function createProduct(
           createdAt: data.created_at,
           updatedAt: data.updated_at,
         };
-      }
-      if (error) {
-        console.error('Supabase createProduct error:', error);
-        throw new Error(error.message || 'Database error creating product');
+      } else if (error) {
+        console.warn('Supabase createProduct warning:', error);
       }
     } catch (e: any) {
-      console.error('Supabase createProduct exception:', e);
-      throw e;
+      console.warn('Supabase createProduct exception (falling back to local storage):', e);
     }
   }
 
   const db = ensureDb();
-  const newProduct: Product = {
-    ...product,
-    id,
-    slug,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  db.products.unshift(newProduct);
+  db.products.unshift(createdProduct);
   saveDb(db);
-  return newProduct;
+  return createdProduct;
 }
 
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
+  let updatedFromSupabase: Product | null = null;
   const supabase = getSupabaseServerClient();
   if (supabase) {
     try {
@@ -1051,7 +1137,7 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 
       const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single();
       if (!error && data) {
-        return {
+        updatedFromSupabase = {
           id: data.id,
           name: data.name,
           slug: data.slug,
@@ -1080,11 +1166,18 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 
   const db = ensureDb();
   const index = db.products.findIndex(p => p.id === id);
-  if (index === -1) return null;
+  if (index === -1) {
+    if (updatedFromSupabase) {
+      db.products.unshift(updatedFromSupabase);
+      saveDb(db);
+      return updatedFromSupabase;
+    }
+    return null;
+  }
 
   db.products[index] = {
     ...db.products[index],
-    ...updates,
+    ...(updatedFromSupabase || updates),
     updatedAt: new Date().toISOString(),
   };
   saveDb(db);
@@ -1096,26 +1189,21 @@ export async function deleteProduct(id: string): Promise<boolean> {
   if (supabase) {
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
-      if (!error) return true;
-      console.error('Supabase deleteProduct error:', error);
-      throw new Error(error.message || 'Database error deleting product');
+      if (error) {
+        console.warn('Supabase deleteProduct warning:', error);
+      }
     } catch (e: any) {
-      console.error('Supabase deleteProduct exception:', e);
-      throw e;
+      console.warn('Supabase deleteProduct exception (falling back to local storage):', e);
     }
   }
 
   const db = ensureDb();
-  const initialLength = db.products.length;
   db.products = db.products.filter(p => p.id !== id);
-  if (db.products.length !== initialLength) {
-    if (db.variants) {
-      db.variants = db.variants.filter(v => v.productId !== id);
-    }
-    saveDb(db);
-    return true;
+  if (db.variants) {
+    db.variants = db.variants.filter(v => v.productId !== id);
   }
-  return false;
+  saveDb(db);
+  return true;
 }
 
 // Product Variants
@@ -1171,7 +1259,9 @@ export async function deleteProductVariant(id: string): Promise<boolean> {
   if (supabase) {
     try {
       const { error } = await supabase.from('product_variants').delete().eq('id', id);
-      if (!error) return true;
+      if (error) {
+        console.warn('Supabase deleteProductVariant warning:', error);
+      }
     } catch (e) {
       console.warn('Supabase deleteProductVariant fallback:', e);
     }

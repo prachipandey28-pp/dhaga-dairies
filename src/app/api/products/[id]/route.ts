@@ -47,12 +47,10 @@ export async function DELETE(
 
   const { id } = await params;
   try {
-    const success = await deleteProduct(id);
-    if (!success) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-    }
+    await deleteProduct(id);
     return NextResponse.json({ success: true, message: 'Product removed' });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to delete product' }, { status: 400 });
+    console.error('Delete product error:', err);
+    return NextResponse.json({ error: err?.message || 'Failed to delete product' }, { status: 500 });
   }
 }

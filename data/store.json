@@ -518,42 +518,5 @@
       "createdAt": "2026-01-01T00:00:00Z"
     }
   ],
-  "variants": [
-    {
-      "id": "var_daisy_pink",
-      "productId": "prod_daisy_tote",
-      "title": "Pastel Pink",
-      "sku": "BAG-DD-01-PNK",
-      "price": 1299,
-      "stock": 4,
-      "createdAt": "2026-01-10T10:00:00Z"
-    },
-    {
-      "id": "var_daisy_cream",
-      "productId": "prod_daisy_tote",
-      "title": "Classic Cream",
-      "sku": "BAG-DD-01-CRM",
-      "price": 1299,
-      "stock": 4,
-      "createdAt": "2026-01-10T10:00:00Z"
-    },
-    {
-      "id": "var_sun_yellow",
-      "productId": "prod_sunflower_stem",
-      "title": "Sun Yellow",
-      "sku": "FLW-SF-02-YEL",
-      "price": 349,
-      "stock": 10,
-      "createdAt": "2026-01-12T10:00:00Z"
-    },
-    {
-      "id": "var_sun_amber",
-      "productId": "prod_sunflower_stem",
-      "title": "Amber Gold",
-      "sku": "FLW-SF-02-AMB",
-      "price": 349,
-      "stock": 5,
-      "createdAt": "2026-01-12T10:00:00Z"
-    }
-  ]
+  "variants": []
 }
