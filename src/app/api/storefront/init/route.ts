@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getProducts, getCategories, getCollections, getReviews, getOffers } from '@/lib/db';
 
-export const revalidate = 10; // Cache for 10 seconds on Vercel Edge CDN for ultra-fast mobile loading
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 export async function GET() {
   try {
@@ -25,7 +27,9 @@ export async function GET() {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=45',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       }
     );

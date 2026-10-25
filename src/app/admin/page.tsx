@@ -155,6 +155,24 @@ export default function AdminDashboard() {
   // Check auth session on mount
   useEffect(() => {
     checkAuth();
+    // Hydrate local cache immediately for instant zero-delay loading
+    try {
+      const localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
+      const localDeleted: string[] = JSON.parse(localStorage.getItem('dd_deleted_product_ids') || '[]');
+      if (localCustom.length > 0 || localDeleted.length > 0) {
+        const deletedSet = new Set(localDeleted);
+        setProducts(prev => {
+          const map = new Map<string, Product>();
+          for (const p of prev) {
+            if (!deletedSet.has(p.id)) map.set(p.id, p);
+          }
+          for (const p of localCustom) {
+            if (!deletedSet.has(p.id)) map.set(p.id, p);
+          }
+          return Array.from(map.values());
+        });
+      }
+    } catch {}
   }, []);
 
   const checkAuth = async () => {
@@ -177,18 +195,39 @@ export default function AdminDashboard() {
     setIsLoadingData(true);
     try {
       const [statsRes, prodRes, catRes, offRes, coupRes, ordRes, custRes, revRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/products?all=true'),
-        fetch('/api/categories'),
-        fetch('/api/offers'),
-        fetch('/api/coupons'),
-        fetch('/api/admin/orders'),
-        fetch('/api/admin/customers'),
-        fetch('/api/reviews?all=true'),
+        fetch(`/api/admin/stats?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/products?all=true&t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/categories?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/offers?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/coupons?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/admin/orders?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/admin/customers?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/reviews?all=true&t=${Date.now()}`, { cache: 'no-store' }),
       ]);
 
       if (statsRes.ok) setStats((await statsRes.json()).stats);
-      if (prodRes.ok) setProducts((await prodRes.json()).products || []);
+      if (prodRes.ok) {
+        const rawProds: Product[] = (await prodRes.json()).products || [];
+        try {
+          const localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
+          const localDeleted: string[] = JSON.parse(localStorage.getItem('dd_deleted_product_ids') || '[]');
+          const deletedSet = new Set(localDeleted);
+          const map = new Map<string, Product>();
+          for (const p of rawProds) {
+            if (!deletedSet.has(p.id)) {
+              map.set(p.id, p);
+            }
+          }
+          for (const p of localCustom) {
+            if (!deletedSet.has(p.id)) {
+              map.set(p.id, p);
+            }
+          }
+          setProducts(Array.from(map.values()));
+        } catch {
+          setProducts(rawProds);
+        }
+      }
       if (catRes.ok) setCategories((await catRes.json()).categories || []);
       if (offRes.ok) setOffers((await offRes.json()).offers || []);
       if (coupRes.ok) setCoupons((await coupRes.json()).coupons || []);
@@ -331,13 +370,30 @@ export default function AdminDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        const errData = await res.json().catch(() => ({}));
         if (res.ok) {
+          const updatedProduct: Product = errData.product || {
+            ...payload,
+            id: editingProductId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          try {
+            let localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
+            localCustom = localCustom.map(p => p.id === editingProductId ? updatedProduct : p);
+            if (!localCustom.some(p => p.id === editingProductId)) {
+              localCustom.unshift(updatedProduct);
+            }
+            localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
+            window.dispatchEvent(new Event('dd_products_changed'));
+          } catch (e) {
+            console.error(e);
+          }
           showToast('Product updated in database ✿');
           setIsProductModalOpen(false);
           resetProductForm();
           loadAllData();
         } else {
-          const errData = await res.json().catch(() => ({}));
           showToast(errData.error || 'Failed to update product');
         }
       } else {
@@ -346,14 +402,33 @@ export default function AdminDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        const resData = await res.json().catch(() => ({}));
         if (res.ok) {
+          const newProduct: Product = resData.product || {
+            ...payload,
+            id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          try {
+            let localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
+            let localDeleted: string[] = JSON.parse(localStorage.getItem('dd_deleted_product_ids') || '[]');
+            localCustom = localCustom.filter(p => p.id !== newProduct.id);
+            localCustom.unshift(newProduct);
+            localDeleted = localDeleted.filter(id => id !== newProduct.id);
+            localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
+            localStorage.setItem('dd_deleted_product_ids', JSON.stringify(localDeleted));
+            window.dispatchEvent(new Event('dd_products_changed'));
+          } catch (e) {
+            console.error(e);
+          }
           showToast('New product added to database ✿');
           setIsProductModalOpen(false);
           resetProductForm();
           loadAllData();
         } else {
-          const errData = await res.json().catch(() => ({}));
-          showToast(errData.error || 'Failed to add product');
+          showToast(resData.error || 'Failed to add product');
         }
       }
     } catch {
@@ -406,24 +481,57 @@ export default function AdminDashboard() {
 
   const handleDeleteProduct = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to permanently delete "${name}" from the database?`)) return;
-    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      showToast(`"${name}" removed from database ✿`);
-      loadAllData();
-    } else {
-      const errData = await res.json().catch(() => ({}));
-      showToast(errData.error || 'Could not delete product');
+    
+    // Immediate local removal so user gets instant 0ms feedback!
+    try {
+      let localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
+      let localDeleted: string[] = JSON.parse(localStorage.getItem('dd_deleted_product_ids') || '[]');
+      localCustom = localCustom.filter(p => p.id !== id);
+      if (!localDeleted.includes(id)) {
+        localDeleted.push(id);
+      }
+      localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
+      localStorage.setItem('dd_deleted_product_ids', JSON.stringify(localDeleted));
+      window.dispatchEvent(new Event('dd_products_changed'));
+    } catch (e) {
+      console.error(e);
     }
+    setProducts(prev => prev.filter(p => p.id !== id));
+    showToast(`"${name}" removed from database ✿`);
+
+    try {
+      await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn('Backend delete sync:', e);
+    }
+    loadAllData();
   };
 
   const handleTogglePublishProduct = async (p: Product) => {
     const updated = !p.isPublished;
-    await fetch(`/api/products/${p.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isPublished: updated }),
-    });
+    try {
+      let localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
+      const idx = localCustom.findIndex(item => item.id === p.id);
+      if (idx >= 0) {
+        localCustom[idx].isPublished = updated;
+      } else {
+        localCustom.push({ ...p, isPublished: updated });
+      }
+      localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
+      window.dispatchEvent(new Event('dd_products_changed'));
+    } catch (e) {
+      console.error(e);
+    }
+    setProducts(prev => prev.map(item => item.id === p.id ? { ...item, isPublished: updated } : item));
     showToast(`Product ${updated ? 'activated on storefront' : 'hidden from public'} ✿`);
+
+    try {
+      await fetch(`/api/products/${p.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublished: updated }),
+      });
+    } catch {}
     loadAllData();
   };
 

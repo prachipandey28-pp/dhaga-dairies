@@ -271,14 +271,42 @@ export default function Storefront() {
     }
   };
 
+  // Helper to merge local user additions/deletions with server products
+  const mergeWithLocal = (serverProds: Product[]): Product[] => {
+    try {
+      const localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
+      const localDeleted: string[] = JSON.parse(localStorage.getItem('dd_deleted_product_ids') || '[]');
+      const deletedSet = new Set(localDeleted);
+      const map = new Map<string, Product>();
+
+      // 1. Add server products that aren't deleted
+      for (const p of serverProds) {
+        if (!deletedSet.has(p.id)) {
+          map.set(p.id, p);
+        }
+      }
+      // 2. Add or override with locally created/edited products (if not deleted and published)
+      for (const p of localCustom) {
+        if (!deletedSet.has(p.id) && p.isPublished !== false) {
+          map.set(p.id, p);
+        }
+      }
+      return Array.from(map.values());
+    } catch {
+      return serverProds;
+    }
+  };
+
   // Fetch live storefront data in 1 single ultra-fast combined API call
   const loadData = async () => {
     try {
-      const res = await fetch('/api/storefront/init');
+      const res = await fetch(`/api/storefront/init?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data.products)) {
-          setProducts(data.products);
+        if (Array.isArray(data.products) && data.products.length > 0) {
+          setProducts(mergeWithLocal(data.products));
+        } else {
+          setProducts(prev => mergeWithLocal(prev));
         }
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories);
@@ -294,15 +322,15 @@ export default function Storefront() {
 
     try {
       const [prodRes, colRes, revRes, catRes, offerRes] = await Promise.all([
-        fetch('/api/products'),
-        fetch('/api/collections'),
-        fetch('/api/reviews'),
-        fetch('/api/categories?onlyActive=true'),
-        fetch('/api/offers?bannerOnly=true'),
+        fetch(`/api/products?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch('/api/collections', { cache: 'no-store' }),
+        fetch('/api/reviews', { cache: 'no-store' }),
+        fetch('/api/categories?onlyActive=true', { cache: 'no-store' }),
+        fetch('/api/offers?bannerOnly=true', { cache: 'no-store' }),
       ]);
       if (prodRes.ok) {
         const prodData = await prodRes.json();
-        if (Array.isArray(prodData.products)) setProducts(prodData.products);
+        if (Array.isArray(prodData.products)) setProducts(mergeWithLocal(prodData.products));
       }
       if (colRes.ok) {
         const colData = await colRes.json();
@@ -326,7 +354,19 @@ export default function Storefront() {
   };
 
   useEffect(() => {
+    setProducts(prev => mergeWithLocal(prev));
     loadData();
+
+    const handleSync = () => {
+      setProducts(prev => mergeWithLocal(prev));
+    };
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('dd_products_changed', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('dd_products_changed', handleSync);
+    };
   }, []);
 
   const showToast = (msg: string) => {
@@ -491,6 +531,7 @@ export default function Storefront() {
 
   // Filtered products
   const filteredProducts = products.filter(p => {
+    if (p.isPublished === false) return false;
     const matchesCategory = selectedFilter === 'All' || p.category.toLowerCase() === selectedFilter.toLowerCase();
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

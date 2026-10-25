@@ -22,6 +22,10 @@ const productSchema = z.object({
   scheduledLaunchAt: z.string().nullable().optional(),
 });
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category') || undefined;
