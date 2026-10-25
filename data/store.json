@@ -11,7 +11,7 @@
     {
       "id": "admin_2",
       "email": "owner@dhagadiaries.com",
-      "passwordHash": "$2b$12$70NUH48ZGC99f4C.ZHgm6ezAWqidYAf1RRpKMAgQ7R1ySMbQOeTry",
+      "passwordHash": "$2b$10$olGQ3N.guwTrOxSG0JS6J.WjDdf8JuCYKZmZg/ArYo3hlI2N71Nyi",
       "name": "Store Owner",
       "role": "owner",
       "createdAt": "2026-10-21T03:46:05.046Z"
