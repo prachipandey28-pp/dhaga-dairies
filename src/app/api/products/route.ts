@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getProducts, createProduct } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
+import { getCloudSync, mergeWithCloudSync, saveCloudCustomProduct } from '@/lib/cloudSync';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -35,13 +36,35 @@ export async function GET(request: Request) {
   const session = await getAdminSession();
   const onlyPublished = !all || !session;
 
-  const products = await getProducts({
-    onlyPublished,
-    category,
-    query,
-  });
+  try {
+    const [rawProducts, cloudSync] = await Promise.all([
+      getProducts({ onlyPublished: false, category, query }).catch(() => []),
+      getCloudSync().catch(() => ({ deletedProductIds: [] as string[], customProducts: [] as any[], updatedAt: new Date().toISOString() })),
+    ]);
 
-  return NextResponse.json({ products });
+    let products = mergeWithCloudSync(rawProducts, cloudSync);
+
+    if (onlyPublished) {
+      products = products.filter(p => p.isPublished);
+    }
+    if (category && category !== 'All') {
+      products = products.filter(p => p.category.toLowerCase() === category.toLowerCase());
+    }
+    if (query) {
+      const q = query.toLowerCase();
+      products = products.filter(
+        p =>
+          p.name.toLowerCase().includes(q) ||
+          p.desc.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q)
+      );
+    }
+
+    return NextResponse.json({ products });
+  } catch (error: any) {
+    console.error('Products GET error:', error);
+    return NextResponse.json({ products: [] });
+  }
 }
 
 export async function POST(request: Request) {
@@ -86,6 +109,9 @@ export async function POST(request: Request) {
       isNewArrival: data.isNewArrival,
       scheduledLaunchAt: data.scheduledLaunchAt || null,
     });
+
+    // Cloud sync persistence
+    await saveCloudCustomProduct(newProduct).catch(e => console.warn('Cloud save error:', e));
 
     return NextResponse.json({ success: true, product: newProduct }, { status: 201 });
   } catch (error: any) {

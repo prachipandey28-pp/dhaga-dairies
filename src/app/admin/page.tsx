@@ -208,25 +208,10 @@ export default function AdminDashboard() {
       if (statsRes.ok) setStats((await statsRes.json()).stats);
       if (prodRes.ok) {
         const rawProds: Product[] = (await prodRes.json()).products || [];
+        setProducts(rawProds);
         try {
-          const localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
-          const localDeleted: string[] = JSON.parse(localStorage.getItem('dd_deleted_product_ids') || '[]');
-          const deletedSet = new Set(localDeleted);
-          const map = new Map<string, Product>();
-          for (const p of rawProds) {
-            if (!deletedSet.has(p.id)) {
-              map.set(p.id, p);
-            }
-          }
-          for (const p of localCustom) {
-            if (!deletedSet.has(p.id)) {
-              map.set(p.id, p);
-            }
-          }
-          setProducts(Array.from(map.values()));
-        } catch {
-          setProducts(rawProds);
-        }
+          localStorage.setItem('dd_cached_products', JSON.stringify(rawProds));
+        } catch {}
       }
       if (catRes.ok) setCategories((await catRes.json()).categories || []);
       if (offRes.ok) setOffers((await offRes.json()).offers || []);
@@ -450,6 +435,11 @@ export default function AdminDashboard() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+          body: JSON.stringify({ action: 'save', product: updatedProduct }),
+        }).catch(() => {});
         saveToLocalStorage(updatedProduct);
         showToast('Product updated successfully ✿');
         setIsProductModalOpen(false);
@@ -472,6 +462,11 @@ export default function AdminDashboard() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+          body: JSON.stringify({ action: 'save', product: newProduct }),
+        }).catch(() => {});
         saveToLocalStorage(newProduct);
         showToast('New product added to catalog ✿');
         setIsProductModalOpen(false);
@@ -487,6 +482,11 @@ export default function AdminDashboard() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+        body: JSON.stringify({ action: 'save', product: fallbackProduct }),
+      }).catch(() => {});
       saveToLocalStorage(fallbackProduct);
       showToast('Product saved successfully ✿');
       setIsProductModalOpen(false);
@@ -563,6 +563,11 @@ export default function AdminDashboard() {
         method: 'DELETE',
         headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
       });
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+        body: JSON.stringify({ action: 'delete', productId: id }),
+      });
     } catch (e) {
       console.warn('Backend delete sync:', e);
     }
@@ -590,8 +595,13 @@ export default function AdminDashboard() {
     try {
       await fetch(`/api/products/${p.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
         body: JSON.stringify({ isPublished: updated }),
+      });
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+        body: JSON.stringify({ action: 'update', product: { ...p, isPublished: updated } }),
       });
     } catch {}
     loadAllData();
@@ -3386,46 +3396,111 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
                 </div>
               </div>
 
-              {/* Toggles */}
+              {/* Product Visibility & Settings (Clear Visual Cards) */}
               <div
                 style={{
-                  display: 'flex',
-                  gap: '18px',
-                  flexWrap: 'wrap',
-                  margin: '14px 0',
-                  padding: '12px 14px',
-                  background: '#fdf6ec',
-                  borderRadius: '8px',
+                  margin: '16px 0',
+                  padding: '14px',
+                  background: '#fdf8f0',
+                  borderRadius: '10px',
                   border: '1.5px solid #d8b66d',
                 }}
               >
-                <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#570606', fontWeight: 700 }}>
-                  <input
-                    type="checkbox"
-                    checked={productForm.isPublished}
-                    onChange={e => setProductForm({ ...productForm, isPublished: e.target.checked })}
-                    style={{ width: '16px', height: '16px', accentColor: '#570606' }}
-                  />
-                  Published on Store
-                </label>
-                <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#570606', fontWeight: 700 }}>
-                  <input
-                    type="checkbox"
-                    checked={productForm.isFeatured}
-                    onChange={e => setProductForm({ ...productForm, isFeatured: e.target.checked })}
-                    style={{ width: '16px', height: '16px', accentColor: '#570606' }}
-                  />
-                  Featured
-                </label>
-                <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#570606', fontWeight: 700 }}>
-                  <input
-                    type="checkbox"
-                    checked={productForm.isBestseller}
-                    onChange={e => setProductForm({ ...productForm, isBestseller: e.target.checked })}
-                    style={{ width: '16px', height: '16px', accentColor: '#570606' }}
-                  />
-                  Bestseller
-                </label>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#570606', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  ⚙️ Product Settings & Visibility (वेबसाइट डिस्प्ले सेटिंग्स)
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px' }}>
+                  {/* Option 1: Live on Website (Published) */}
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: productForm.isPublished ? '#ecfdf5' : '#ffffff',
+                      border: productForm.isPublished ? '1.5px solid #10b981' : '1px solid #d1d5db',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={productForm.isPublished}
+                      onChange={e => setProductForm({ ...productForm, isPublished: e.target.checked })}
+                      style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#10b981' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: productForm.isPublished ? '#065f46' : '#374151' }}>
+                        🌐 Live on Website
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                        Website par dikhega aur buy ho sakega
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Option 2: Feature on Homepage */}
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: productForm.isFeatured ? '#fef3c7' : '#ffffff',
+                      border: productForm.isFeatured ? '1.5px solid #f59e0b' : '1px solid #d1d5db',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={productForm.isFeatured}
+                      onChange={e => setProductForm({ ...productForm, isFeatured: e.target.checked })}
+                      style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#d97706' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: productForm.isFeatured ? '#92400e' : '#374151' }}>
+                        ⭐ Featured Piece
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                        Homepage top collection me highlight hoga
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Option 3: Bestseller Tag */}
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: productForm.isBestseller ? '#fdf4ff' : '#ffffff',
+                      border: productForm.isBestseller ? '1.5px solid #c084fc' : '1px solid #d1d5db',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={productForm.isBestseller}
+                      onChange={e => setProductForm({ ...productForm, isBestseller: e.target.checked })}
+                      style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#9333ea' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: productForm.isBestseller ? '#701a75' : '#374151' }}>
+                        🏆 Bestseller Badge
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                        Photo par 'BESTSELLER' badge lagega
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <button className="btn" type="submit" style={{ width: '100%', marginTop: '12px' }}>

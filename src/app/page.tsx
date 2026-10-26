@@ -283,9 +283,7 @@ export default function Storefront() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.products) && data.products.length > 0) {
-          setProducts(mergeWithLocal(data.products));
-        } else {
-          setProducts(prev => mergeWithLocal(prev));
+          setProducts(data.products);
         }
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories);
@@ -309,7 +307,9 @@ export default function Storefront() {
       ]);
       if (prodRes.ok) {
         const prodData = await prodRes.json();
-        if (Array.isArray(prodData.products)) setProducts(mergeWithLocal(prodData.products));
+        if (Array.isArray(prodData.products) && prodData.products.length > 0) {
+          setProducts(prodData.products);
+        }
       }
       if (colRes.ok) {
         const colData = await colRes.json();
