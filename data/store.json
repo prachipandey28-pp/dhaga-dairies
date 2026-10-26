@@ -27,30 +27,6 @@
   ],
   "products": [
     {
-      "name": "Tulip clip ",
-      "slug": "tulip-clip-5720",
-      "category": "Accessories",
-      "price": 70,
-      "salePrice": null,
-      "stock": 49,
-      "sku": "clip",
-      "desc": "clips",
-      "image": "/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg",
-      "images": [
-        "/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg"
-      ],
-      "emoji": "👜",
-      "tag": "HANDMADE",
-      "isPublished": true,
-      "isFeatured": false,
-      "isBestseller": false,
-      "isNewArrival": false,
-      "scheduledLaunchAt": null,
-      "id": "prod_1792853665720_wls8",
-      "createdAt": "2026-10-24T14:54:25.724Z",
-      "updatedAt": "2026-10-24T15:06:06.111Z"
-    },
-    {
       "name": "Flower Clip ",
       "slug": "flower-clip-4871",
       "category": "Accessories",

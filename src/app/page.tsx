@@ -14,27 +14,6 @@ declare global {
 // Starter catalog for instantaneous 0ms first render (features real handcrafted products)
 const STARTER_PRODUCTS: Product[] = [
   {
-    id: 'prod_1792853665720_wls8',
-    name: 'Tulip clip',
-    slug: 'tulip-clip-5720',
-    category: 'Accessories',
-    price: 70,
-    salePrice: null,
-    stock: 49,
-    sku: 'clip-01',
-    desc: 'Handmade crochet tulip hair clip with soft pastel yarn and secure metal clasp.',
-    image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg',
-    images: ['/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM__1__1792853653416.jpeg'],
-    emoji: '🌷',
-    tag: 'HANDMADE',
-    isPublished: true,
-    isFeatured: true,
-    isBestseller: false,
-    isNewArrival: true,
-    createdAt: '2026-10-24T14:54:25.724Z',
-    updatedAt: '2026-10-24T15:06:06.111Z',
-  },
-  {
     id: 'prod_1792853594871_1wxk',
     name: 'Flower Clip',
     slug: 'flower-clip-4871',
