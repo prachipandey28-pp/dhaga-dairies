@@ -189,7 +189,7 @@ function getInitialSeed(): DatabaseSchema {
   const adminUsers: AdminUser[] = [
     {
       id: 'admin_1',
-      email: 'admin@dhagadiaries.com',
+      email: '9137407394',
       passwordHash: passwordHash,
       name: 'Dhaga Admin',
       role: 'admin',
@@ -197,6 +197,14 @@ function getInitialSeed(): DatabaseSchema {
     },
     {
       id: 'admin_2',
+      email: 'admin@dhagadiaries.com',
+      passwordHash: passwordHash,
+      name: 'Dhaga Admin',
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'admin_3',
       email: 'owner@dhagadiaries.com',
       passwordHash: bcrypt.hashSync('dhaga-demo', defaultSalt),
       name: 'Store Owner',
@@ -2605,6 +2613,7 @@ export async function deleteReview(id: string): Promise<boolean> {
 
 export async function findAdminByEmail(email: string): Promise<AdminUser | null> {
   const normalized = email.toLowerCase().trim();
+  const digits = normalized.replace(/[^0-9]/g, '');
   const supabase = getSupabaseServerClient();
   if (supabase) {
     try {
@@ -2629,7 +2638,13 @@ export async function findAdminByEmail(email: string): Promise<AdminUser | null>
   }
 
   const db = ensureDb();
-  return (db.adminUsers || []).find(u => u.email.toLowerCase() === normalized) || null;
+  return (
+    (db.adminUsers || []).find(
+      u =>
+        u.email.toLowerCase() === normalized ||
+        (digits.length >= 10 && u.email.replace(/[^0-9]/g, '').endsWith(digits.slice(-10)))
+    ) || null
+  );
 }
 
 export async function verifyAdminRole(userId: string, email: string): Promise<boolean> {

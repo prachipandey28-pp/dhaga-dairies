@@ -194,7 +194,7 @@ const STARTER_CATEGORIES: Category[] = [
 ];
 
 export default function Storefront() {
-  const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919152831829';
+  const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919137407394';
 
   // Pre-populated initial state guarantees zero blank flash on mobile phones
   const [products, setProducts] = useState<Product[]>(STARTER_PRODUCTS);
@@ -1154,7 +1154,7 @@ export default function Storefront() {
                 ◎
               </a>
               <a
-                href="https://wa.me/919152831829"
+                href="https://wa.me/919137407394"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="WhatsApp"
@@ -1248,11 +1248,11 @@ export default function Storefront() {
             <h3>Customer Care</h3>
             <strong>We&apos;re happy to help</strong>
             <p>
-              Phone: <a href="tel:+919152831829">+91 91528 31829</a>
+              Phone: <a href="tel:+919137407394">+91 91374 07394</a>
             </p>
             <p>
               WhatsApp:{' '}
-              <a href="https://wa.me/919152831829" target="_blank" rel="noreferrer">
+              <a href="https://wa.me/919137407394" target="_blank" rel="noreferrer">
                 Chat on WhatsApp ↗
               </a>
             </p>
@@ -1268,7 +1268,7 @@ export default function Storefront() {
             </p>
             <p>For custom orders or special gifts, message us anytime.</p>
             <a
-              href="https://wa.me/919152831829"
+              href="https://wa.me/919137407394"
               target="_blank"
               rel="noreferrer"
               className="footer-contact"
@@ -1291,7 +1291,7 @@ export default function Storefront() {
       {/* 11. Floating Social Buttons */}
       <div className="socialfloat" aria-label="Social links">
         <a
-          href="https://wa.me/919152831829"
+          href="https://wa.me/919137407394"
           target="_blank"
           rel="noreferrer"
           title="Chat with Dhaga Diaries on WhatsApp"

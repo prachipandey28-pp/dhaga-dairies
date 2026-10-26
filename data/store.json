@@ -2,7 +2,7 @@
   "adminUsers": [
     {
       "id": "admin_1",
-      "email": "admin@dhagadiaries.com",
+      "email": "9137407394",
       "passwordHash": "$2b$10$olGQ3N.guwTrOxSG0JS6J.WjDdf8JuCYKZmZg/ArYo3hlI2N71Nyi",
       "name": "Dhaga Admin",
       "role": "admin",
@@ -10,6 +10,14 @@
     },
     {
       "id": "admin_2",
+      "email": "admin@dhagadiaries.com",
+      "passwordHash": "$2b$10$olGQ3N.guwTrOxSG0JS6J.WjDdf8JuCYKZmZg/ArYo3hlI2N71Nyi",
+      "name": "Dhaga Admin",
+      "role": "admin",
+      "createdAt": "2026-10-21T03:46:04.969Z"
+    },
+    {
+      "id": "admin_3",
       "email": "owner@dhagadiaries.com",
       "passwordHash": "$2b$10$olGQ3N.guwTrOxSG0JS6J.WjDdf8JuCYKZmZg/ArYo3hlI2N71Nyi",
       "name": "Store Owner",

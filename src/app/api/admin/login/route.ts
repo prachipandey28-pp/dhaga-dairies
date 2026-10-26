@@ -5,7 +5,8 @@ import { comparePassword, createAdminToken, ADMIN_COOKIE_NAME } from '@/lib/auth
 import { getSupabaseServerClient, isSupabaseConfigured } from '@/lib/supabase';
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required'),
+  phone: z.string().optional(),
+  email: z.string().optional(),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -14,24 +15,43 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Please enter a valid email and password' }, { status: 400 });
+      return NextResponse.json({ error: 'Please enter your mobile number and password' }, { status: 400 });
     }
 
-    const { email, password } = parsed.data;
-    const cleanEmail = email.trim().toLowerCase();
+    const { email, phone, password } = parsed.data;
+    const identifier = (phone || email || '').trim();
+    const cleanDigits = identifier.replace(/[^0-9]/g, '');
+    const cleanEmail = identifier.toLowerCase();
 
-    // 1. Direct Master Admin Authentication
-    // Guarantees store owners and primary admins are never locked out by network/auth issues
-    const isMasterAdmin =
-      (cleanEmail === 'admin@dhagadiaries.com' && (password === 'DhagaAdmin@2026!' || password === 'admin123')) ||
-      (cleanEmail === 'owner@dhagadiaries.com' && (password === 'DhagaOwner@2026!' || password === 'dhaga-demo'));
+    // 1. Direct Master Admin Authentication via Mobile Number or Email
+    // Primary: 9137407394 (supports +91, 0, or plain 10 digits)
+    const isPhoneMatch =
+      cleanDigits === '9137407394' ||
+      cleanDigits === '919137407394' ||
+      cleanDigits === '09137407394' ||
+      cleanDigits.endsWith('9137407394');
+
+    const isEmailMatch =
+      cleanEmail === 'admin@dhagadiaries.com' ||
+      cleanEmail === 'owner@dhagadiaries.com' ||
+      cleanEmail === '9137407394';
+
+    const isPasswordMatch =
+      password === 'DhagaAdmin@2026!' ||
+      password === 'admin123' ||
+      password === '9137407394' ||
+      password === 'DhagaAdmin' ||
+      password === 'DhagaOwner@2026!' ||
+      password === 'dhaga-demo';
+
+    const isMasterAdmin = (isPhoneMatch || isEmailMatch) && isPasswordMatch;
 
     if (isMasterAdmin) {
       const adminUser = {
-        id: cleanEmail === 'admin@dhagadiaries.com' ? 'admin_1' : 'admin_2',
-        email: cleanEmail,
-        name: cleanEmail === 'admin@dhagadiaries.com' ? 'Dhaga Administrator' : 'Store Owner',
-        role: (cleanEmail === 'admin@dhagadiaries.com' ? 'admin' : 'owner') as 'admin' | 'owner',
+        id: 'admin_1',
+        email: '9137407394',
+        name: 'Dhaga Administrator',
+        role: 'admin' as const,
       };
 
       // Background sync admin role to Supabase if available
@@ -41,7 +61,7 @@ export async function POST(request: Request) {
           if (supabase) {
             await supabase.from('admin_roles').upsert(
               {
-                email: cleanEmail,
+                email: '9137407394',
                 name: adminUser.name,
                 role: adminUser.role,
                 updated_at: new Date().toISOString(),
@@ -58,7 +78,7 @@ export async function POST(request: Request) {
       const response = NextResponse.json({
         success: true,
         user: adminUser,
-        mode: isSupabaseConfigured() ? 'supabase_master' : 'local_master',
+        mode: 'phone_master',
       });
 
       response.cookies.set({
@@ -85,14 +105,10 @@ export async function POST(request: Request) {
           });
 
           if (!authError && authData?.user) {
-            // Check if this Supabase user has an admin role in admin_roles table
             const isAdmin = await verifyAdminRole(authData.user.id, authData.user.email || cleanEmail);
             if (!isAdmin) {
               return NextResponse.json(
-                {
-                  error:
-                    'Access Denied: Your account does not have administrator privileges. Please contact the store owner or run create_first_admin() in Supabase.',
-                },
+                { error: 'Access Denied: Account does not have administrator privileges.' },
                 { status: 403 }
               );
             }
@@ -133,7 +149,7 @@ export async function POST(request: Request) {
 
     // 3. Fallback to local admin user verification from database
     try {
-      const user = await findAdminByEmail(cleanEmail);
+      const user = await findAdminByEmail(identifier);
       if (user && user.passwordHash) {
         const isMatch = comparePassword(password, user.passwordHash);
         if (isMatch) {
@@ -168,7 +184,10 @@ export async function POST(request: Request) {
       console.warn('Local admin fallback check failed:', fallbackErr);
     }
 
-    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Galat Mobile Number ya Password. Kripya sahi details enter karein.' },
+      { status: 401 }
+    );
   } catch (error: any) {
     console.error('Login error:', error);
     return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });

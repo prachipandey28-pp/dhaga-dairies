@@ -24,7 +24,7 @@ export default function AdminDashboard() {
   >('overview');
 
   // Login form state
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPhone, setLoginPhone] = useState('9137407394');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+        body: JSON.stringify({ phone: loginPhone, password: loginPassword }),
       });
 
       const data = await res.json();
@@ -1079,19 +1079,22 @@ export default function AdminDashboard() {
 
           <form onSubmit={handleLogin}>
             <div className="field">
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#570606' }}>Admin Email</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#570606' }}>Admin Mobile Number</label>
               <input
-                type="email"
+                type="tel"
                 required
-                placeholder="admin@dhagadiaries.com"
-                value={loginEmail}
-                onChange={e => setLoginEmail(e.target.value)}
+                placeholder="9137407394"
+                value={loginPhone}
+                onChange={e => setLoginPhone(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px',
                   borderRadius: '8px',
                   border: '1px solid #e8d9c7',
                   background: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
                 }}
               />
             </div>
@@ -1129,7 +1132,7 @@ export default function AdminDashboard() {
                 border: '1px solid #d8b66d',
               }}
             >
-              {isLoggingIn ? 'Verifying Supabase Credentials…' : 'Sign In to Admin Panel ✿'}
+              {isLoggingIn ? 'Verifying Admin Credentials…' : 'Sign In with Mobile Number ✿'}
             </button>
           </form>
 
@@ -1145,12 +1148,9 @@ export default function AdminDashboard() {
             }}
           >
             <div style={{ fontWeight: 600, color: '#570606', marginBottom: '4px' }}>
-              ✦ Database Access Information
+              ✦ Admin Access Credentials
             </div>
-            When Supabase credentials are configured in <code>.env.local</code>, this login authenticates against{' '}
-            <strong>Supabase Auth</strong> and verifies your role in <code>admin_roles</code>. For local development,
-            fallback admin credentials (<code>admin@dhagadiaries.com</code> / <code>DhagaAdmin@2026!</code>) are
-            supported out of the box.
+            Sign in using Admin Mobile Number: <code>9137407394</code> and your Password (<code>DhagaAdmin@2026!</code>).
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '18px' }}>
