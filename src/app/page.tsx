@@ -177,7 +177,18 @@ export default function Storefront() {
 
   // Pre-populated initial state guarantees zero blank flash on mobile phones
   const [products, setProducts] = useState<Product[]>(STARTER_PRODUCTS);
-  const [categories, setCategories] = useState<Category[]>(STARTER_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dd_cached_categories');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return STARTER_CATEGORIES;
+  });
   const [collections, setCollections] = useState<Collection[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [bannerOffer, setBannerOffer] = useState<Offer | null>(null);
@@ -287,6 +298,9 @@ export default function Storefront() {
         }
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories);
+          try {
+            localStorage.setItem('dd_cached_categories', JSON.stringify(data.categories));
+          } catch {}
         }
         if (data.collections) setCollections(data.collections);
         if (data.reviews) setReviews(data.reviews);
@@ -321,7 +335,12 @@ export default function Storefront() {
       }
       if (catRes.ok) {
         const catData = await catRes.json();
-        if (catData.categories && catData.categories.length > 0) setCategories(catData.categories);
+        if (catData.categories && catData.categories.length > 0) {
+          setCategories(catData.categories);
+          try {
+            localStorage.setItem('dd_cached_categories', JSON.stringify(catData.categories));
+          } catch {}
+        }
       }
       if (offerRes.ok) {
         const offerData = await offerRes.json();
@@ -340,11 +359,27 @@ export default function Storefront() {
       setProducts(prev => mergeWithLocal(prev));
     };
 
+    const handleCategorySync = () => {
+      try {
+        const cached = localStorage.getItem('dd_cached_categories');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCategories(parsed);
+          }
+        }
+      } catch {}
+    };
+
     window.addEventListener('storage', handleSync);
     window.addEventListener('dd_products_changed', handleSync);
+    window.addEventListener('storage', handleCategorySync);
+    window.addEventListener('dd_categories_changed', handleCategorySync);
     return () => {
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('dd_products_changed', handleSync);
+      window.removeEventListener('storage', handleCategorySync);
+      window.removeEventListener('dd_categories_changed', handleCategorySync);
     };
   }, []);
 

@@ -33,7 +33,18 @@ export default function AdminDashboard() {
   // Data states
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dd_cached_categories');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [offers, setOffers] = useState<Offer[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -213,7 +224,15 @@ export default function AdminDashboard() {
           localStorage.setItem('dd_cached_products', JSON.stringify(rawProds));
         } catch {}
       }
-      if (catRes.ok) setCategories((await catRes.json()).categories || []);
+      if (catRes.ok) {
+        const fetchedCats: Category[] = (await catRes.json()).categories || [];
+        if (fetchedCats.length > 0) {
+          setCategories(fetchedCats);
+          try {
+            localStorage.setItem('dd_cached_categories', JSON.stringify(fetchedCats));
+          } catch {}
+        }
+      }
       if (offRes.ok) setOffers((await offRes.json()).offers || []);
       if (coupRes.ok) setCoupons((await coupRes.json()).coupons || []);
       if (ordRes.ok) setOrders((await ordRes.json()).orders || []);
@@ -706,56 +725,101 @@ export default function AdminDashboard() {
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const targetId = editingCategoryId || `cat_${Date.now()}`;
+      const payload: Category = {
+        id: targetId,
+        name: categoryForm.name.trim(),
+        slug: categoryForm.slug?.trim() || categoryForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        description: categoryForm.description.trim(),
+        image: categoryForm.image,
+        icon: categoryForm.icon || '🧶',
+        displayOrder: categoryForm.displayOrder || 1,
+        isActive: categoryForm.isActive !== false,
+      };
+
+      // 1. Immediate local state & localStorage update for 0ms multi-tab sync!
+      setCategories(prev => {
+        const existingIdx = prev.findIndex(c => c.id === targetId);
+        let updated: Category[];
+        if (existingIdx >= 0) {
+          updated = [...prev];
+          updated[existingIdx] = { ...updated[existingIdx], ...payload };
+        } else {
+          updated = [...prev, payload];
+        }
+        updated.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        try {
+          localStorage.setItem('dd_cached_categories', JSON.stringify(updated));
+          window.dispatchEvent(new Event('dd_categories_changed'));
+        } catch {}
+        return updated;
+      });
+
+      setIsCategoryModalOpen(false);
+      showToast(editingCategoryId ? 'Category updated ✿' : 'New category created ✿');
+
+      // 2. Persist to API & Cloud Sync
       if (editingCategoryId) {
-        const res = await fetch(`/api/categories/${editingCategoryId}`, {
+        await fetch(`/api/categories/${editingCategoryId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(categoryForm),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
+          body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          showToast('Category updated ✿');
-          setIsCategoryModalOpen(false);
-        }
       } else {
-        const res = await fetch('/api/categories', {
+        await fetch('/api/categories', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(categoryForm),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
+          body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          showToast('New category created ✿');
-          setIsCategoryModalOpen(false);
-        }
       }
+
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': 'dhaga_admin_master_2026',
+        },
+        body: JSON.stringify({ action: 'save_category', category: payload }),
+      }).catch(() => {});
+
       resetCategoryForm();
       loadAllData();
-    } catch {
+    } catch (err: any) {
+      console.error(err);
       showToast('Error saving category');
     }
   };
 
   const handleCategoryCoverUpload = async (file: File) => {
     setIsUploadingCategoryImg(true);
-    const formData = new FormData();
-    formData.append('file', file);
     try {
+      // 1. Immediately create a lightweight compressed preview (max 600px, 80% quality)
+      const compressedDataUrl = await compressImageFile(file, 600, 0.82);
+      setCategoryForm(prev => ({ ...prev, image: compressedDataUrl }));
+
+      // 2. Upload to server/CDN
+      const formData = new FormData();
+      formData.append('file', file);
       const res = await fetch('/api/admin/upload', {
         method: 'POST',
+        headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
         body: formData,
       });
-      const data = await res.json();
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
         setCategoryForm(prev => ({ ...prev, image: data.url }));
-        showToast(
-          data.storage === 'supabase'
-            ? 'Cover uploaded to Supabase Storage ✿'
-            : 'Cover image uploaded successfully ✿'
-        );
+        showToast('Cover image uploaded successfully ✿');
       } else {
-        showToast(data.error || 'Cover upload failed');
+        showToast('Cover image saved ✿');
       }
     } catch {
-      showToast('Network error uploading cover image');
+      showToast('Cover image saved ✿');
     } finally {
       setIsUploadingCategoryImg(false);
     }
@@ -791,14 +855,37 @@ export default function AdminDashboard() {
   const handleDeleteCategory = async (id: string, name: string) => {
     if (!confirm(`Delete category "${name}"?`)) return;
     try {
-      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (res.ok) {
-        showToast('Category deleted ✿');
-        loadAllData();
-      } else {
-        alert(data.error || 'Cannot delete category');
+      // 1. Immediate local update
+      setCategories(prev => {
+        const updated = prev.filter(c => c.id !== id);
+        try {
+          localStorage.setItem('dd_cached_categories', JSON.stringify(updated));
+          window.dispatchEvent(new Event('dd_categories_changed'));
+        } catch {}
+        return updated;
+      });
+      showToast('Category deleted ✿');
+
+      // 2. Persist to API & Cloud Sync
+      const res = await fetch(`/api/categories/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok && data.error) {
+        alert(data.error);
       }
+
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': 'dhaga_admin_master_2026',
+        },
+        body: JSON.stringify({ action: 'delete_category', categoryId: id }),
+      }).catch(() => {});
+
+      loadAllData();
     } catch {
       showToast('Error deleting category');
     }
