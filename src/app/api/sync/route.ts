@@ -8,6 +8,9 @@ import {
   saveCloudCategory,
   deleteCloudCategory,
   saveCloudCategories,
+  getCloudReviews,
+  saveCloudReview,
+  deleteCloudReview,
 } from '@/lib/cloudSync';
 import { getAdminSession } from '@/lib/auth';
 
@@ -17,13 +20,14 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const [data, categories] = await Promise.all([
+    const [data, categories, reviews] = await Promise.all([
       getCloudSync(),
       getCloudCategories().catch(() => []),
+      getCloudReviews().catch(() => ({ customReviews: [], deletedReviewIds: [] })),
     ]);
 
     return NextResponse.json(
-      { success: true, ...data, categories },
+      { success: true, ...data, categories, reviews },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -53,10 +57,13 @@ export async function POST(request: Request) {
       category,
       categoryId,
       categories,
+      review,
+      reviewId,
     } = body;
 
     let updatedSync;
     let updatedCategories;
+    let updatedReviews;
 
     if (action === 'delete' && productId) {
       updatedSync = await addCloudDeletedId(productId);
@@ -73,6 +80,10 @@ export async function POST(request: Request) {
       updatedCategories = await deleteCloudCategory(categoryId);
     } else if (action === 'sync_categories' && Array.isArray(categories)) {
       updatedCategories = await saveCloudCategories(categories);
+    } else if ((action === 'save_review' || action === 'add_review' || action === 'update_review') && review) {
+      updatedReviews = await saveCloudReview(review);
+    } else if (action === 'delete_review' && reviewId) {
+      updatedReviews = await deleteCloudReview(reviewId);
     }
 
     if (!updatedSync) {
@@ -81,11 +92,15 @@ export async function POST(request: Request) {
     if (!updatedCategories) {
       updatedCategories = await getCloudCategories().catch(() => []);
     }
+    if (!updatedReviews) {
+      updatedReviews = await getCloudReviews().catch(() => ({ customReviews: [], deletedReviewIds: [] }));
+    }
 
     return NextResponse.json({
       success: true,
       ...updatedSync,
       categories: updatedCategories,
+      reviews: updatedReviews,
     });
   } catch (err: any) {
     console.error('API sync error:', err);

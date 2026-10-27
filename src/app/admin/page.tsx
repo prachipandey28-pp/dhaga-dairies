@@ -49,7 +49,18 @@ export default function AdminDashboard() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dd_cached_reviews');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isResettingMetrics, setIsResettingMetrics] = useState(false);
@@ -156,6 +167,22 @@ export default function AdminDashboard() {
     orders: Order[];
   } | null>(null);
 
+  // Review Tab State
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [isUploadingReviewImg, setIsUploadingReviewImg] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    customerName: '',
+    productName: '',
+    rating: 5,
+    title: '',
+    quote: '',
+    byline: '',
+    image: '',
+    isApproved: true,
+    isVerifiedPurchase: true,
+  });
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
@@ -237,7 +264,14 @@ export default function AdminDashboard() {
       if (coupRes.ok) setCoupons((await coupRes.json()).coupons || []);
       if (ordRes.ok) setOrders((await ordRes.json()).orders || []);
       if (custRes.ok) setCustomers((await custRes.json()).customers || []);
-      if (revRes.ok) setReviews((await revRes.json()).reviews || []);
+      if (revRes.ok) {
+        const revData = await revRes.json();
+        const fetchedRevs: Review[] = revData.reviews || [];
+        setReviews(fetchedRevs);
+        try {
+          localStorage.setItem('dd_cached_reviews', JSON.stringify(fetchedRevs));
+        } catch {}
+      }
     } catch (e) {
       console.error('Error fetching admin data:', e);
       showToast('Could not fetch all database records');
@@ -1103,22 +1137,196 @@ export default function AdminDashboard() {
   };
 
   // Review Operations
+  const handleOpenReviewModal = (rev?: Review) => {
+    if (rev) {
+      setEditingReviewId(rev.id);
+      setReviewForm({
+        customerName: rev.customerName || '',
+        productName: rev.productName || (products[0]?.name || 'Handcrafted Crochet'),
+        rating: rev.rating || 5,
+        title: rev.title || '',
+        quote: rev.quote || '',
+        byline: rev.byline || '',
+        image: rev.image || '',
+        isApproved: rev.isApproved !== false,
+        isVerifiedPurchase: rev.isVerifiedPurchase !== false,
+      });
+    } else {
+      setEditingReviewId(null);
+      setReviewForm({
+        customerName: '',
+        productName: products[0]?.name || 'Handcrafted Crochet',
+        rating: 5,
+        title: '',
+        quote: '',
+        byline: '',
+        image: '',
+        isApproved: true,
+        isVerifiedPurchase: true,
+      });
+    }
+    setIsReviewModalOpen(true);
+  };
+
+  const handleReviewCoverUpload = async (file: File) => {
+    setIsUploadingReviewImg(true);
+    try {
+      const compressedDataUrl = await compressImageFile(file, 600, 0.82);
+      setReviewForm(prev => ({ ...prev, image: compressedDataUrl }));
+
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        setReviewForm(prev => ({ ...prev, image: data.url }));
+        showToast('Review photo uploaded successfully ✿');
+      } else {
+        showToast('Review photo attached ✿');
+      }
+    } catch {
+      showToast('Review photo attached ✿');
+    } finally {
+      setIsUploadingReviewImg(false);
+    }
+  };
+
+  const handleSaveReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewForm.customerName.trim() || !reviewForm.quote.trim()) {
+      showToast('Please enter customer name and review quote ✿');
+      return;
+    }
+
+    const payload = {
+      customerName: reviewForm.customerName.trim(),
+      productName: reviewForm.productName.trim() || 'Handcrafted Crochet',
+      rating: Number(reviewForm.rating) || 5,
+      title: reviewForm.title.trim() || reviewForm.productName.trim() || 'Loved Stitch by Stitch',
+      quote: reviewForm.quote.trim(),
+      byline: reviewForm.byline.trim() || `— ${reviewForm.customerName.trim().toUpperCase()}`,
+      image: reviewForm.image.trim() || (products.find(p => p.name === reviewForm.productName)?.image || 'https://images.unsplash.com/photo-1638427291164-b4adea2f7b96?auto=format&fit=crop&w=800&q=80'),
+      isApproved: reviewForm.isApproved,
+      isVerifiedPurchase: reviewForm.isVerifiedPurchase,
+    };
+
+    try {
+      let savedReview: Review;
+      if (editingReviewId) {
+        setReviews(prev =>
+          prev.map(r => (r.id === editingReviewId ? { ...r, ...payload, updatedAt: new Date().toISOString() } : r))
+        );
+        setIsReviewModalOpen(false);
+
+        const res = await fetch(`/api/reviews/${editingReviewId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
+          body: JSON.stringify(payload),
+        });
+        const d = await res.json().catch(() => ({}));
+        savedReview = d.review || { id: editingReviewId, ...payload, createdAt: new Date().toISOString() };
+        showToast('Review updated successfully ✿');
+      } else {
+        const tempId = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const newRev: Review = {
+          id: tempId,
+          ...payload,
+          createdAt: new Date().toISOString(),
+        };
+        setReviews(prev => [newRev, ...prev]);
+        setIsReviewModalOpen(false);
+
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
+          body: JSON.stringify(payload),
+        });
+        const d = await res.json().catch(() => ({}));
+        savedReview = d.review || newRev;
+        showToast('New review added successfully ✿');
+      }
+
+      try {
+        const nextReviews = editingReviewId
+          ? reviews.map(r => (r.id === editingReviewId ? savedReview : r))
+          : [savedReview, ...reviews.filter(r => r.id !== savedReview.id)];
+        localStorage.setItem('dd_cached_reviews', JSON.stringify(nextReviews));
+        window.dispatchEvent(new CustomEvent('dd_reviews_changed', { detail: nextReviews }));
+      } catch {}
+
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+        body: JSON.stringify({ action: 'save_review', review: savedReview }),
+      }).catch(() => {});
+
+      loadAllData();
+    } catch {
+      showToast('Error saving review');
+    }
+  };
+
   const handleToggleApproveReview = async (r: Review) => {
     const updated = !r.isApproved;
+    const updatedRev = { ...r, isApproved: updated };
+    setReviews(prev => prev.map(item => (item.id === r.id ? updatedRev : item)));
+
+    try {
+      const nextReviews = reviews.map(item => (item.id === r.id ? updatedRev : item));
+      localStorage.setItem('dd_cached_reviews', JSON.stringify(nextReviews));
+      window.dispatchEvent(new CustomEvent('dd_reviews_changed', { detail: nextReviews }));
+    } catch {}
+
     await fetch(`/api/reviews/${r.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': 'dhaga_admin_master_2026',
+      },
       body: JSON.stringify({ isApproved: updated }),
-    });
+    }).catch(() => {});
+
+    fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+      body: JSON.stringify({ action: 'save_review', review: updatedRev }),
+    }).catch(() => {});
+
     showToast(`Review ${updated ? 'approved for display' : 'hidden'} ✿`);
-    loadAllData();
   };
 
   const handleDeleteReview = async (id: string) => {
-    if (!confirm('Delete this customer review?')) return;
-    await fetch(`/api/reviews/${id}`, { method: 'DELETE' });
+    if (!confirm('Are you sure you want to delete this customer review?')) return;
+    setReviews(prev => prev.filter(r => r.id !== id));
+
+    try {
+      const nextReviews = reviews.filter(r => r.id !== id);
+      localStorage.setItem('dd_cached_reviews', JSON.stringify(nextReviews));
+      window.dispatchEvent(new CustomEvent('dd_reviews_changed', { detail: nextReviews }));
+    } catch {}
+
+    await fetch(`/api/reviews/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
+    }).catch(() => {});
+
+    fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
+      body: JSON.stringify({ action: 'delete_review', id }),
+    }).catch(() => {});
+
     showToast('Review deleted ✿');
-    loadAllData();
   };
 
   // Filtered Lists
@@ -1365,7 +1573,7 @@ export default function AdminDashboard() {
         style={{
           background: '#570606',
           color: '#fff5e8',
-          padding: '14px 5vw',
+          padding: '12px max(4vw, 14px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -1373,6 +1581,8 @@ export default function AdminDashboard() {
           position: 'sticky',
           top: 0,
           zIndex: 100,
+          flexWrap: 'wrap',
+          gap: '10px',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1409,9 +1619,10 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="admin-header-cluster" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {/* Mode Pill */}
           <span
+            className="admin-db-pill"
             style={{
               fontSize: '11px',
               padding: '4px 10px',
@@ -1435,9 +1646,10 @@ export default function AdminDashboard() {
               fontSize: '12px',
               color: '#e4c178',
               border: '1px solid #8d3430',
-              padding: '5px 12px',
+              padding: '6px 14px',
               borderRadius: '999px',
               textDecoration: 'none',
+              background: 'rgba(255,255,255,0.05)',
             }}
           >
             View Shop ↗
@@ -1450,7 +1662,7 @@ export default function AdminDashboard() {
               color: '#fecaca',
               background: 'transparent',
               border: '1px solid #991b1b',
-              padding: '5px 12px',
+              padding: '6px 14px',
               borderRadius: '999px',
               cursor: 'pointer',
             }}
@@ -1460,8 +1672,51 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Tab Navigation Menu */}
+      {/* Mobile Fast Tab Switcher for Quick Smartphone Operation */}
+      <div
+        className="admin-mobile-tab-bar"
+        style={{
+          display: 'none',
+          padding: '10px 14px',
+          background: '#3b0606',
+          borderBottom: '1px solid #6b1515',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '12px', color: '#e4c178', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            SECTION:
+          </span>
+          <select
+            value={activeTab}
+            onChange={e => setActiveTab(e.target.value as any)}
+            style={{
+              flex: 1,
+              padding: '9px 12px',
+              borderRadius: '8px',
+              background: '#fffdf9',
+              color: '#570606',
+              fontWeight: 700,
+              fontSize: '15px',
+              border: '1.5px solid #d8b66d',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="overview">📊 Overview ({products.length} products)</option>
+            <option value="products">🧶 Products ({products.length})</option>
+            <option value="categories">🏷️ Categories ({categories.length})</option>
+            <option value="offers">🎁 Offers & Coupons ({offers.length + coupons.length})</option>
+            <option value="orders">📦 Orders ({orders.length})</option>
+            <option value="customers">👥 Customers ({customers.length})</option>
+            <option value="reviews">💬 Reviews ({reviews.length})</option>
+            <option value="setup">⚡ Supabase & SQL Setup</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Tab Navigation Menu (Desktop & Tablet) */}
       <nav
+        className="admin-desktop-tab-bar"
         style={{
           background: '#470505',
           borderBottom: '1px solid #6b1515',
@@ -1469,6 +1724,7 @@ export default function AdminDashboard() {
           display: 'flex',
           gap: '6px',
           overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {[
@@ -1553,14 +1809,16 @@ export default function AdminDashboard() {
 
             {/* 8 Primary Real Metrics Cards */}
             <div
+              className="admin-overview-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
                 gap: '16px',
                 marginBottom: '28px',
               }}
             >
               <div
+                className="stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1573,14 +1831,15 @@ export default function AdminDashboard() {
                   Total Catalog Products
                 </div>
                 <div style={{ fontSize: '28px', fontWeight: 700, color: '#570606', marginTop: '6px' }}>
-                  {stats?.totalProducts ?? products.length}
+                  {products.length}
                 </div>
                 <div style={{ fontSize: '12px', color: '#15803d', marginTop: '4px' }}>
-                  ● {stats?.activeProducts ?? products.filter(p => p.isPublished).length} Active on storefront
+                  ● {products.filter(p => p.isPublished).length} Active on storefront
                 </div>
               </div>
 
               <div
+                className="stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1601,6 +1860,7 @@ export default function AdminDashboard() {
               </div>
 
               <div
+                className="stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1621,6 +1881,7 @@ export default function AdminDashboard() {
               </div>
 
               <div
+                className="stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1636,11 +1897,11 @@ export default function AdminDashboard() {
                   style={{
                     fontSize: '28px',
                     fontWeight: 700,
-                    color: (stats?.lowStockProductsCount || 0) > 0 ? '#b91c1c' : '#15803d',
+                    color: products.filter(p => p.stock <= 3).length > 0 ? '#b91c1c' : '#15803d',
                     marginTop: '6px',
                   }}
                 >
-                  {stats?.lowStockProductsCount ?? products.filter(p => p.stock <= 3).length}
+                  {products.filter(p => p.stock <= 3).length}
                 </div>
                 <div style={{ fontSize: '12px', color: '#b91c1c', marginTop: '4px' }}>
                   Pieces with ≤ 3 stock items
@@ -3124,7 +3385,7 @@ export default function AdminDashboard() {
         {/* ========================================================================= */}
         {activeTab === 'reviews' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h2 style={{ fontFamily: 'Georgia, serif', color: '#f7dfb8', margin: 0, fontSize: '26px', fontWeight: 600, textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
                   Customer Reviews & Testimonials
@@ -3133,9 +3394,30 @@ export default function AdminDashboard() {
                   Review customer feedback, verified purchase notes, and approve quotes for display in the &quot;Loved stitch by stitch&quot; section.
                 </p>
               </div>
+
+              <button
+                className="btn"
+                onClick={() => handleOpenReviewModal()}
+                style={{
+                  background: '#570606',
+                  color: '#fff5e8',
+                  fontSize: '13px',
+                  padding: '9px 18px',
+                  borderRadius: '999px',
+                  border: '1px solid #d8b66d',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+                }}
+              >
+                + Add New Review
+              </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: '16px' }}>
               {reviews.map(rev => (
                 <div
                   key={rev.id}
@@ -3144,52 +3426,133 @@ export default function AdminDashboard() {
                     borderRadius: '12px',
                     border: '1px solid #e8d9c7',
                     padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 3px 12px rgba(0,0,0,0.04)',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <div>
-                      <strong style={{ color: '#570606', fontSize: '16px' }}>{rev.customerName}</strong>
-                      <div style={{ color: '#d8b66d', fontSize: '14px', marginTop: '2px' }}>
-                        {'★'.repeat(rev.rating)}
-                        {'☆'.repeat(5 - rev.rating)}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {rev.image ? (
+                          <img
+                            src={rev.image}
+                            alt={rev.customerName}
+                            style={{
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '8px',
+                              objectFit: 'cover',
+                              border: '1px solid #d8b66d',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '8px',
+                              background: '#f8f3eb',
+                              border: '1px solid #d8b66d',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '20px',
+                            }}
+                          >
+                            💬
+                          </div>
+                        )}
+                        <div>
+                          <strong style={{ color: '#570606', fontSize: '15px', display: 'block' }}>
+                            {rev.customerName}
+                          </strong>
+                          <div style={{ color: '#d8b66d', fontSize: '13px', marginTop: '2px' }}>
+                            {'★'.repeat(rev.rating)}
+                            {'☆'.repeat(5 - rev.rating)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {rev.isVerifiedPurchase && (
+                          <span
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '999px',
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                            }}
+                          >
+                            ✓ Verified
+                          </span>
+                        )}
+                        <button
+                          onClick={() => handleToggleApproveReview(rev)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '999px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            border: 'none',
+                            cursor: 'pointer',
+                            background: rev.isApproved ? '#dcfce7' : '#fee2e2',
+                            color: rev.isApproved ? '#15803d' : '#b91c1c',
+                          }}
+                        >
+                          {rev.isApproved ? 'Approved ✓' : 'Hidden ✕'}
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleToggleApproveReview(rev)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: rev.isApproved ? '#dcfce7' : '#fee2e2',
-                        color: rev.isApproved ? '#15803d' : '#b91c1c',
-                      }}
-                    >
-                      {rev.isApproved ? 'Approved ✓' : 'Hidden ✕'}
-                    </button>
+
+                    {rev.title && (
+                      <h4 style={{ margin: '0 0 6px', fontSize: '14px', color: '#570606', fontWeight: 600 }}>
+                        {rev.title}
+                      </h4>
+                    )}
+
+                    <p style={{ fontStyle: 'italic', fontSize: '13px', color: '#654b3f', margin: '0 0 12px', lineHeight: 1.5 }}>
+                      &ldquo;{rev.quote}&rdquo;
+                    </p>
                   </div>
 
-                  <p style={{ fontStyle: 'italic', fontSize: '13px', color: '#654b3f', margin: '0 0 12px' }}>
-                    &ldquo;{rev.quote}&rdquo;
-                  </p>
-
-                  <div style={{ fontSize: '11px', color: 'var(--muted)', borderTop: '1px solid #f2e6d9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>For: {rev.productName}</span>
-                    <button
-                      onClick={() => handleDeleteReview(rev.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#b91c1c',
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Delete
-                    </button>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', borderTop: '1px solid #f2e6d9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ fontWeight: 500 }}>For: <strong style={{ color: '#570606' }}>{rev.productName}</strong></span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => handleOpenReviewModal(rev)}
+                        style={{
+                          background: '#fdf6ec',
+                          border: '1px solid #d8b66d',
+                          color: '#570606',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteReview(rev.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#b91c1c',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: '4px 6px',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -4226,6 +4589,258 @@ Sunflower Stem,Flowers,349,,15,FLW-SF-02,Bright yarn sunflower,https://images.un
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT / ADD CUSTOMER REVIEW                                         */}
+      {/* ========================================================================= */}
+      {isReviewModalOpen && (
+        <div className="overlay" style={{ display: 'flex', zIndex: 1000 }}>
+          <div className="modal" style={{ maxWidth: '620px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modalhead">
+              <h2>{editingReviewId ? '✏️ Edit Customer Review' : '💬 Add New Customer Review'}</h2>
+              <button className="close" onClick={() => setIsReviewModalOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveReview}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '12px' }}>
+                <div className="field">
+                  <label>Customer Name *</label>
+                  <input
+                    required
+                    placeholder="e.g. Preeti Sharma"
+                    value={reviewForm.customerName}
+                    onChange={e => setReviewForm({ ...reviewForm, customerName: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label>Product Reference *</label>
+                  <input
+                    list="products-datalist"
+                    required
+                    placeholder="e.g. Daisy Dream Tote"
+                    value={reviewForm.productName}
+                    onChange={e => setReviewForm({ ...reviewForm, productName: e.target.value })}
+                  />
+                  <datalist id="products-datalist">
+                    {products.map(p => (
+                      <option key={p.id} value={p.name} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '12px' }}>
+                <div className="field">
+                  <label>Star Rating (1 - 5) *</label>
+                  <select
+                    value={reviewForm.rating}
+                    onChange={e => setReviewForm({ ...reviewForm, rating: parseInt(e.target.value) || 5 })}
+                  >
+                    <option value="5">★★★★★ (5 Stars)</option>
+                    <option value="4">★★★★☆ (4 Stars)</option>
+                    <option value="3">★★★☆☆ (3 Stars)</option>
+                    <option value="2">★★☆☆☆ (2 Stars)</option>
+                    <option value="1">★☆☆☆☆ (1 Star)</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Review Heading / Title</label>
+                  <input
+                    placeholder="e.g. Loved stitch by stitch"
+                    value={reviewForm.title}
+                    onChange={e => setReviewForm({ ...reviewForm, title: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <label>Customer Review Quote / Feedback *</label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="e.g. The detailing is beautiful and the bag feels so special. You can tell it was made with care."
+                  value={reviewForm.quote}
+                  onChange={e => setReviewForm({ ...reviewForm, quote: e.target.value })}
+                />
+              </div>
+
+              <div className="field">
+                <label>Customer Byline (Optional)</label>
+                <input
+                  placeholder="e.g. — PREETI S., MUMBAI or — CUSTOMER NOTE"
+                  value={reviewForm.byline}
+                  onChange={e => setReviewForm({ ...reviewForm, byline: e.target.value })}
+                />
+              </div>
+
+              {/* Review Photo Upload */}
+              <div className="field">
+                <label>Review / Customer Photo (Upload or URL)</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    placeholder="https://... or upload photo"
+                    value={reviewForm.image}
+                    onChange={e => setReviewForm({ ...reviewForm, image: e.target.value })}
+                    style={{ flex: 1 }}
+                  />
+                  <label
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      background: '#570606',
+                      color: '#fff5e8',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      whiteSpace: 'nowrap',
+                      border: '1px solid #d8b66d',
+                      userSelect: 'none',
+                    }}
+                  >
+                    {isUploadingReviewImg ? 'Uploading…' : '📁 Upload Photo'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      disabled={isUploadingReviewImg}
+                      onChange={async e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          await handleReviewCoverUpload(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {/* Review Photo Preview */}
+                {reviewForm.image && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      background: '#251a2e',
+                      borderRadius: '8px',
+                      border: '1px solid #443449',
+                    }}
+                  >
+                    <img
+                      src={reviewForm.image}
+                      alt="Review Preview"
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        objectFit: 'cover',
+                        borderRadius: '6px',
+                        border: '1px solid #d8b66d',
+                      }}
+                      onError={e => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#e8c779', display: 'block' }}>
+                        Photo Attached
+                      </span>
+                      <small
+                        style={{
+                          fontSize: '11px',
+                          color: '#c0afc0',
+                          wordBreak: 'break-all',
+                          display: 'block',
+                          maxHeight: '34px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {reviewForm.image}
+                      </small>
+                    </div>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => setReviewForm({ ...reviewForm, image: '' })}
+                      style={{ padding: '4px 10px', fontSize: '11px' }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', margin: '14px 0 20px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#3d2522', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={reviewForm.isApproved}
+                    onChange={e => setReviewForm({ ...reviewForm, isApproved: e.target.checked })}
+                  />
+                  <span>Approved for storefront display</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#3d2522', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={reviewForm.isVerifiedPurchase}
+                    onChange={e => setReviewForm({ ...reviewForm, isVerifiedPurchase: e.target.checked })}
+                  />
+                  <span>Verified Purchase badge</span>
+                </label>
+              </div>
+
+              <button
+                className="btn"
+                type="submit"
+                style={{ width: '100%', background: '#570606', color: '#fff5e8', padding: '12px', fontSize: '14px', fontWeight: 600 }}
+              >
+                {editingReviewId ? 'Save Review Changes ✿' : 'Publish New Review ✿'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile-Friendly Global Responsive CSS */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 768px) {
+          .admin-mobile-tab-bar {
+            display: block !important;
+          }
+          .admin-header-cluster {
+            width: 100% !important;
+            justify-content: space-between !important;
+            margin-top: 6px !important;
+          }
+          .admin-db-pill {
+            display: none !important;
+          }
+          .admin-overview-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 10px !important;
+          }
+          .admin-overview-grid .stat-card {
+            padding: 12px 14px !important;
+          }
+          .admin-overview-grid .stat-card div:nth-child(2) {
+            font-size: 22px !important;
+          }
+          .adminwrap input, .adminwrap select, .adminwrap textarea {
+            font-size: 16px !important; /* Prevents auto-zoom on iOS */
+          }
+          main {
+            padding: 16px 12px 60px !important;
+          }
+          .modal {
+            width: 96% !important;
+            padding: 16px !important;
+            max-height: 92vh !important;
+          }
+        }
+      `}} />
     </div>
   );
 }

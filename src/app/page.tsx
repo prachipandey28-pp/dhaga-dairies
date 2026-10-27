@@ -190,7 +190,18 @@ export default function Storefront() {
     return STARTER_CATEGORIES;
   });
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dd_cached_reviews');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [bannerOffer, setBannerOffer] = useState<Offer | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -303,7 +314,12 @@ export default function Storefront() {
           } catch {}
         }
         if (data.collections) setCollections(data.collections);
-        if (data.reviews) setReviews(data.reviews);
+        if (data.reviews) {
+          setReviews(data.reviews);
+          try {
+            localStorage.setItem('dd_cached_reviews', JSON.stringify(data.reviews));
+          } catch {}
+        }
         if (data.banner) setBannerOffer(data.banner);
         return;
       }
@@ -331,7 +347,12 @@ export default function Storefront() {
       }
       if (revRes.ok) {
         const revData = await revRes.json();
-        if (revData.reviews) setReviews(revData.reviews);
+        if (revData.reviews) {
+          setReviews(revData.reviews);
+          try {
+            localStorage.setItem('dd_cached_reviews', JSON.stringify(revData.reviews));
+          } catch {}
+        }
       }
       if (catRes.ok) {
         const catData = await catRes.json();
@@ -371,15 +392,40 @@ export default function Storefront() {
       } catch {}
     };
 
+    const handleReviewsSync = () => {
+      try {
+        const cached = localStorage.getItem('dd_cached_reviews');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            setReviews(parsed);
+          }
+        }
+      } catch {}
+      fetch(`/api/reviews?t=${Date.now()}`, { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => {
+          if (Array.isArray(d.reviews)) {
+            setReviews(d.reviews);
+            localStorage.setItem('dd_cached_reviews', JSON.stringify(d.reviews));
+          }
+        })
+        .catch(() => {});
+    };
+
     window.addEventListener('storage', handleSync);
     window.addEventListener('dd_products_changed', handleSync);
     window.addEventListener('storage', handleCategorySync);
     window.addEventListener('dd_categories_changed', handleCategorySync);
+    window.addEventListener('storage', handleReviewsSync);
+    window.addEventListener('dd_reviews_changed', handleReviewsSync);
     return () => {
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('dd_products_changed', handleSync);
       window.removeEventListener('storage', handleCategorySync);
       window.removeEventListener('dd_categories_changed', handleCategorySync);
+      window.removeEventListener('storage', handleReviewsSync);
+      window.removeEventListener('dd_reviews_changed', handleReviewsSync);
     };
   }, []);
 
@@ -950,10 +996,13 @@ export default function Storefront() {
             <p>A closer look at the little handmade treasures customers adore.</p>
           </div>
           <div className="product-reviews-grid">
-            {reviews.length > 0 ? (
-              reviews.slice(0, 6).map(rev => (
+            {reviews.filter(r => r.isApproved !== false).length > 0 ? (
+              reviews
+                .filter(r => r.isApproved !== false)
+                .slice(0, 6)
+                .map(rev => (
                 <article key={rev.id} className="product-review-card">
-                  <img src={rev.image} alt={rev.productName} loading="lazy" />
+                  <img src={rev.image || 'https://images.unsplash.com/photo-1638427291164-b4adea2f7b96?auto=format&fit=crop&w=900&q=85'} alt={rev.productName} loading="lazy" />
                   <div className="product-review-copy">
                     <div className="product-review-stars" aria-label={`${rev.rating} out of 5 stars`}>
                       {'★'.repeat(rev.rating)}
@@ -962,7 +1011,7 @@ export default function Storefront() {
                     <h3>{rev.title || rev.productName}</h3>
                     <blockquote>“{rev.quote}”</blockquote>
                     <p className="product-review-byline">
-                      {rev.byline || '— CUSTOMER NOTE'}
+                      {rev.byline || (rev.customerName ? `— ${rev.customerName.toUpperCase()}` : '— CUSTOMER NOTE')}
                       {rev.isVerifiedPurchase && (
                         <span className="verified-badge">✓ Verified</span>
                       )}

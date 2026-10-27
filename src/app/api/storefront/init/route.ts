@@ -5,8 +5,10 @@ import {
   mergeWithCloudSync,
   getCloudCategories,
   mergeWithCloudCategories,
+  getCloudReviews,
+  mergeWithCloudReviews,
 } from '@/lib/cloudSync';
-import { Category } from '@/types';
+import { Category, Review } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -14,7 +16,7 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const [rawProducts, rawCategories, collections, reviews, offers, cloudSync, cloudCats] = await Promise.all([
+    const [rawProducts, rawCategories, collections, rawReviews, offers, cloudSync, cloudCats, cloudReviews] = await Promise.all([
       getProducts({ onlyPublished: true }).catch(() => []),
       getCategories(true).catch(() => []),
       getCollections().catch(() => []),
@@ -22,6 +24,7 @@ export async function GET() {
       getOffers(true).catch(() => []),
       getCloudSync().catch(() => ({ deletedProductIds: [] as string[], customProducts: [] as any[], updatedAt: new Date().toISOString() })),
       getCloudCategories().catch(() => [] as Category[]),
+      getCloudReviews().catch(() => ({ customReviews: [] as Review[], deletedReviewIds: [] as string[] })),
     ]);
 
     const mergedProducts = mergeWithCloudSync(rawProducts, cloudSync);
@@ -29,6 +32,9 @@ export async function GET() {
 
     const mergedCategories = mergeWithCloudCategories(rawCategories, cloudCats);
     const categories = mergedCategories.filter(c => c.isActive);
+
+    const mergedReviews = mergeWithCloudReviews(rawReviews, cloudReviews);
+    const reviews = mergedReviews.filter(r => r.isApproved);
 
     const bannerOffer = offers.find(o => o.isBannerActive && o.isActive) || null;
 
