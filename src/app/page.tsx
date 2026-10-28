@@ -11,29 +11,8 @@ declare global {
   }
 }
 
-// Starter catalog for instantaneous 0ms first render (features real handcrafted products)
+// Starter catalog for instantaneous 0ms first render (features active handcrafted products)
 const STARTER_PRODUCTS: Product[] = [
-  {
-    id: 'prod_1792853594871_1wxk',
-    name: 'Flower Clip',
-    slug: 'flower-clip-4871',
-    category: 'Accessories',
-    price: 100,
-    salePrice: null,
-    stock: 8,
-    sku: 'clip-02',
-    desc: 'Charming crochet blossom hair clip, handcrafted with premium milk-cotton yarn.',
-    image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM_1792853585793.jpeg',
-    images: ['/uploads/WhatsApp_Image_2026-10-11_at_5_22_49_PM_1792853585793.jpeg'],
-    emoji: '🌸',
-    tag: 'BESTSELLER',
-    isPublished: true,
-    isFeatured: true,
-    isBestseller: true,
-    isNewArrival: false,
-    createdAt: '2026-10-24T14:53:14.875Z',
-    updatedAt: '2026-10-24T14:53:14.875Z',
-  },
   {
     id: 'prod_1792853398906_vl07',
     name: 'Rose Tulip',
@@ -75,27 +54,6 @@ const STARTER_PRODUCTS: Product[] = [
     isNewArrival: true,
     createdAt: '2026-10-24T14:48:38.507Z',
     updatedAt: '2026-10-24T14:48:38.507Z',
-  },
-  {
-    id: 'prod_1792853211799_xome',
-    name: 'Simple Gajra',
-    slug: 'simpal-gajra-1799',
-    category: 'Accessories',
-    price: 300,
-    salePrice: 250,
-    stock: 50,
-    sku: 'gajra-05',
-    desc: 'Traditional hair gajra handcrafted with white & yellow wool buds, reusable and evergreen.',
-    image: '/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM__1__1792853192777.jpeg',
-    images: ['/uploads/WhatsApp_Image_2026-10-11_at_5_22_51_PM__1__1792853192777.jpeg'],
-    emoji: '🌼',
-    tag: 'NEW ARRIVAL',
-    isPublished: true,
-    isFeatured: false,
-    isBestseller: false,
-    isNewArrival: true,
-    createdAt: '2026-10-24T14:46:51.802Z',
-    updatedAt: '2026-10-24T14:47:05.566Z',
   },
   {
     id: 'prod_1792852337558_cvd3',
@@ -176,7 +134,18 @@ export default function Storefront() {
   const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919137407394';
 
   // Pre-populated initial state guarantees zero blank flash on mobile phones
-  const [products, setProducts] = useState<Product[]>(STARTER_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dd_cached_products');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return STARTER_PRODUCTS;
+  });
   const [categories, setCategories] = useState<Category[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -306,6 +275,9 @@ export default function Storefront() {
         const data = await res.json();
         if (Array.isArray(data.products) && data.products.length > 0) {
           setProducts(data.products);
+          try {
+            localStorage.setItem('dd_cached_products', JSON.stringify(data.products));
+          } catch {}
         }
         if (data.categories && data.categories.length > 0) {
           setCategories(data.categories);
@@ -339,6 +311,9 @@ export default function Storefront() {
         const prodData = await prodRes.json();
         if (Array.isArray(prodData.products) && prodData.products.length > 0) {
           setProducts(prodData.products);
+          try {
+            localStorage.setItem('dd_cached_products', JSON.stringify(prodData.products));
+          } catch {}
         }
       }
       if (colRes.ok) {
@@ -377,6 +352,16 @@ export default function Storefront() {
     loadData();
 
     const handleSync = () => {
+      try {
+        const cached = localStorage.getItem('dd_cached_products');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProducts(mergeWithLocal(parsed));
+            return;
+          }
+        }
+      } catch {}
       setProducts(prev => mergeWithLocal(prev));
     };
 

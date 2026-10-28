@@ -32,7 +32,18 @@ export default function AdminDashboard() {
 
   // Data states
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dd_cached_products');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [categories, setCategories] = useState<Category[]>(() => {
     if (typeof window !== 'undefined') {
       try {
