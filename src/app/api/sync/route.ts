@@ -11,6 +11,7 @@ import {
   getCloudReviews,
   saveCloudReview,
   deleteCloudReview,
+  CategorySyncData,
 } from '@/lib/cloudSync';
 import { getAdminSession } from '@/lib/auth';
 
@@ -20,14 +21,14 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const [data, categories, reviews] = await Promise.all([
+    const [data, categoriesSync, reviews] = await Promise.all([
       getCloudSync(),
-      getCloudCategories().catch(() => []),
+      getCloudCategories().catch(() => ({ customCategories: [], deletedCategoryIds: [] } as CategorySyncData)),
       getCloudReviews().catch(() => ({ customReviews: [], deletedReviewIds: [] })),
     ]);
 
     return NextResponse.json(
-      { success: true, ...data, categories, reviews },
+      { success: true, ...data, categories: categoriesSync.customCategories, categoriesSync, reviews },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
       updatedSync = await getCloudSync();
     }
     if (!updatedCategories) {
-      updatedCategories = await getCloudCategories().catch(() => []);
+      updatedCategories = await getCloudCategories().catch(() => ({ customCategories: [], deletedCategoryIds: [] } as CategorySyncData));
     }
     if (!updatedReviews) {
       updatedReviews = await getCloudReviews().catch(() => ({ customReviews: [], deletedReviewIds: [] }));
@@ -99,7 +100,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       ...updatedSync,
-      categories: updatedCategories,
+      categories: updatedCategories.customCategories,
+      categoriesSync: updatedCategories,
       reviews: updatedReviews,
     });
   } catch (err: any) {

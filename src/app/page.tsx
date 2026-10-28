@@ -125,9 +125,9 @@ const STARTER_PRODUCTS: Product[] = [
 
 const STARTER_CATEGORIES: Category[] = [
   { id: 'cat_bags', name: 'Bags', slug: 'bags', description: 'Slowly hand-crocheted everyday totes, pouches, and slings.', image: 'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600&q=80', icon: '👜', displayOrder: 1, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'cat_flowers', name: 'Flowers', slug: 'flowers', description: 'Everlasting blooms crafted with premium cotton yarn.', image: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=80', icon: '🌸', displayOrder: 2, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'cat_plushies', name: 'Plushies', slug: 'plushies', description: 'Whimsical companions stuffed with love and softness.', image: 'https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=600&q=80', icon: '🧸', displayOrder: 3, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'cat_accessories', name: 'Accessories', slug: 'accessories', description: 'Delicate crochet scrunchies, coasters, and charms.', image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80', icon: '✨', displayOrder: 4, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'cat_flowers', name: 'Flowers', slug: 'flowers', description: 'Everlasting blooms crafted with premium cotton yarn that never wilt.', image: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=80', icon: '🌸', displayOrder: 2, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'cat_plushies', name: 'Plushies', slug: 'plushies', description: 'Whimsical companions stuffed with love, softness, and nostalgia.', image: 'https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=600&q=80', icon: '🧸', displayOrder: 3, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'cat_accessories', name: 'Accessories', slug: 'accessories', description: 'Delicate crochet scrunchies, coasters, keychains, and charms.', image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80', icon: '✨', displayOrder: 4, isActive: true, createdAt: '2026-01-01T00:00:00Z' },
 ];
 
 export default function Storefront() {
@@ -772,9 +772,9 @@ export default function Storefront() {
                     document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
                   }}
                   style={{
-                    backgroundImage: cat.image
-                      ? `linear-gradient(0deg,#3e0808b8,transparent 62%),url('${cat.image}')`
-                      : undefined,
+                    backgroundImage: `linear-gradient(0deg, rgba(62, 8, 8, 0.78), rgba(62, 8, 8, 0.22)), url('${cat.image || 'https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=600&q=85'}')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                   }}
                 >
                   <span className="cat-icon">{cat.icon || '🧶'}</span>

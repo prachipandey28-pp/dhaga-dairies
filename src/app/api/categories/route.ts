@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCategories, createCategory } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
-import { getCloudCategories, saveCloudCategory, mergeWithCloudCategories } from '@/lib/cloudSync';
+import { getCloudCategories, saveCloudCategory, mergeWithCloudCategories, CategorySyncData } from '@/lib/cloudSync';
 
 const createCategorySchema = z.object({
   name: z.string().min(1, 'Category name is required'),
@@ -23,12 +23,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const onlyActive = searchParams.get('onlyActive') === 'true';
 
-    const [baseCats, cloudCats] = await Promise.all([
+    const [baseCats, cloudData] = await Promise.all([
       getCategories(false).catch(() => []),
-      getCloudCategories().catch(() => []),
+      getCloudCategories().catch(() => ({ customCategories: [], deletedCategoryIds: [] } as CategorySyncData)),
     ]);
 
-    let categories = mergeWithCloudCategories(baseCats, cloudCats);
+    let categories = mergeWithCloudCategories(baseCats, cloudData);
     if (onlyActive) {
       categories = categories.filter(c => c.isActive);
     }

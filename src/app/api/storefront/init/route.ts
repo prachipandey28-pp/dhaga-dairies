@@ -23,7 +23,7 @@ export async function GET() {
       getReviews(true).catch(() => []),
       getOffers(true).catch(() => []),
       getCloudSync().catch(() => ({ deletedProductIds: [] as string[], customProducts: [] as any[], updatedAt: new Date().toISOString() })),
-      getCloudCategories().catch(() => [] as Category[]),
+      getCloudCategories().catch(() => ({ customCategories: [] as Category[], deletedCategoryIds: [] as string[] })),
       getCloudReviews().catch(() => ({ customReviews: [] as Review[], deletedReviewIds: [] as string[] })),
     ]);
 

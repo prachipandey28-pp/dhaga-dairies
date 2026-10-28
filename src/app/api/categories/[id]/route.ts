@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCategoryById, updateCategory, deleteCategory } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
-import { getCloudCategories, saveCloudCategory, deleteCloudCategory } from '@/lib/cloudSync';
+import { getCloudCategories, saveCloudCategory, deleteCloudCategory, normalizeCategory, CategorySyncData } from '@/lib/cloudSync';
 
 const updateCategorySchema = z.object({
   name: z.string().optional(),
@@ -24,17 +24,24 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const cloudCats = await getCloudCategories().catch(() => []);
-    const match = cloudCats.find(c => c.id === id);
+    const [baseCat, cloudData] = await Promise.all([
+      getCategoryById(id).catch(() => null),
+      getCloudCategories().catch(() => ({ customCategories: [], deletedCategoryIds: [] } as CategorySyncData)),
+    ]);
+
+    if (cloudData.deletedCategoryIds?.includes(id)) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    }
+
+    const match = cloudData.customCategories?.find(c => c.id === id);
     if (match) {
       return NextResponse.json({ success: true, category: match });
     }
 
-    const category = await getCategoryById(id);
-    if (!category) {
+    if (!baseCat) {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, category });
+    return NextResponse.json({ success: true, category: baseCat });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -58,22 +65,17 @@ export async function PUT(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const updated = await updateCategory(id, parsed.data);
-    if (updated) {
-      await saveCloudCategory(updated).catch(e => console.warn('Cloud cat update warning:', e));
-      return NextResponse.json({ success: true, category: updated });
-    }
+    const baseUpdated = await updateCategory(id, parsed.data).catch(() => null);
+    const cloudData = await getCloudCategories().catch(() => ({ customCategories: [], deletedCategoryIds: [] } as CategorySyncData));
+    const existing = cloudData.customCategories?.find(c => c.id === id) || baseUpdated || (await getCategoryById(id).catch(() => null));
 
-    // Fallback: update in cloud categories
-    const cloudCats = await getCloudCategories();
-    const existing = cloudCats.find(c => c.id === id);
-    if (existing) {
-      const merged = { ...existing, ...parsed.data, updatedAt: new Date().toISOString() };
-      await saveCloudCategory(merged);
-      return NextResponse.json({ success: true, category: merged });
-    }
+    const mergedCategory = normalizeCategory(
+      { ...(existing || {}), ...parsed.data, id },
+      existing || undefined
+    );
 
-    return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    await saveCloudCategory(mergedCategory).catch(e => console.warn('Cloud cat update warning:', e));
+    return NextResponse.json({ success: true, category: mergedCategory });
   } catch (error: any) {
     console.error('Error updating category:', error);
     return NextResponse.json({ error: error.message || 'Failed to update category' }, { status: 500 });
@@ -92,12 +94,8 @@ export async function DELETE(
 
   const { id } = await params;
   try {
-    const result = await deleteCategory(id);
+    await deleteCategory(id).catch(() => {});
     await deleteCloudCategory(id).catch(e => console.warn('Cloud cat delete warning:', e));
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.message || 'Cannot delete category' }, { status: 400 });
-    }
 
     return NextResponse.json({ success: true, message: 'Category deleted successfully' });
   } catch (error: any) {

@@ -4138,8 +4138,20 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
                 </div>
               </div>
 
-              <button className="btn" type="submit" style={{ width: '100%', marginTop: '16px' }}>
-                {editingCategoryId ? 'Update Category ✿' : 'Save Category ✿'}
+              <button
+                className="btn"
+                type="submit"
+                disabled={isUploadingCategoryImg}
+                style={{
+                  width: '100%',
+                  marginTop: '16px',
+                  opacity: isUploadingCategoryImg ? 0.6 : 1,
+                  cursor: isUploadingCategoryImg ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isUploadingCategoryImg
+                  ? 'Uploading Image…'
+                  : (editingCategoryId ? 'Update Category ✿' : 'Save Category ✿')}
               </button>
             </form>
           </div>

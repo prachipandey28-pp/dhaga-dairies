@@ -20,7 +20,13 @@ export interface ReviewSyncData {
 let inMemoryProductSync: CloudSyncData | null = null;
 let lastProductFetchTime = 0;
 
-let inMemoryCategorySync: Category[] | null = null;
+export interface CategorySyncData {
+  customCategories: Category[];
+  deletedCategoryIds: string[];
+  updatedAt?: string;
+}
+
+let inMemoryCategorySync: CategorySyncData | null = null;
 let lastCategoryFetchTime = 0;
 
 let inMemoryReviewsSync: ReviewSyncData | null = null;
@@ -159,7 +165,22 @@ export function mergeWithCloudSync(baseProducts: Product[], sync: CloudSyncData)
 // CATEGORY CLOUD SYNC
 // =========================================================================
 
-export async function getCloudCategories(): Promise<Category[]> {
+export function normalizeCategory(c: any, fallback?: Partial<Category>): Category {
+  return {
+    id: c?.id || fallback?.id || '',
+    name: c?.name || fallback?.name || '',
+    slug: c?.slug || fallback?.slug || (c?.name ? c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : ''),
+    description: c?.description ?? c?.desc ?? fallback?.description ?? '',
+    image: c?.image ?? c?.img ?? fallback?.image ?? '',
+    icon: c?.icon || fallback?.icon || '🧶',
+    displayOrder: Number(c?.displayOrder ?? c?.order ?? fallback?.displayOrder ?? 1),
+    isActive: c?.isActive !== false && c?.is_active !== false,
+    createdAt: c?.createdAt || fallback?.createdAt || new Date().toISOString(),
+    updatedAt: c?.updatedAt || new Date().toISOString(),
+  };
+}
+
+export async function getCloudCategories(): Promise<CategorySyncData> {
   const now = Date.now();
   if (inMemoryCategorySync && now - lastCategoryFetchTime < CACHE_TTL_MS) {
     return inMemoryCategorySync;
@@ -182,22 +203,35 @@ export async function getCloudCategories(): Promise<Category[]> {
     if (res.ok) {
       const json = await res.json();
       const data = json?.data || {};
-      const cats: Category[] = Array.isArray(data.cats) ? data.cats : [];
-      if (cats.length > 0) {
-        inMemoryCategorySync = cats;
-        lastCategoryFetchTime = now;
-        return cats;
-      }
+      const rawCats = Array.isArray(data.customCategories)
+        ? data.customCategories
+        : (Array.isArray(data.cats) ? data.cats : []);
+      const deletedIds = Array.isArray(data.deletedCategoryIds) ? data.deletedCategoryIds : [];
+
+      const result: CategorySyncData = {
+        customCategories: rawCats.map((c: any) => normalizeCategory(c)),
+        deletedCategoryIds: deletedIds,
+        updatedAt: data.updatedAt || new Date().toISOString(),
+      };
+      inMemoryCategorySync = result;
+      lastCategoryFetchTime = now;
+      return result;
     }
   } catch (err) {
     console.warn('Cloud category sync fetch warning:', err);
   }
 
-  return inMemoryCategorySync || [];
+  return inMemoryCategorySync || { customCategories: [], deletedCategoryIds: [] };
 }
 
-export async function saveCloudCategories(cats: Category[]): Promise<Category[]> {
-  inMemoryCategorySync = cats;
+export async function updateCloudCategories(data: Partial<CategorySyncData>): Promise<CategorySyncData> {
+  const current = await getCloudCategories();
+  const next: CategorySyncData = {
+    customCategories: (data.customCategories ?? current.customCategories).map(c => normalizeCategory(c)),
+    deletedCategoryIds: data.deletedCategoryIds ?? current.deletedCategoryIds,
+    updatedAt: new Date().toISOString(),
+  };
+  inMemoryCategorySync = next;
   lastCategoryFetchTime = Date.now();
 
   try {
@@ -211,7 +245,7 @@ export async function saveCloudCategories(cats: Category[]): Promise<Category[]>
       },
       body: JSON.stringify({
         name: 'dhaga_categories',
-        data: { cats, updatedAt: new Date().toISOString() },
+        data: next,
       }),
       signal: controller.signal,
     });
@@ -220,40 +254,86 @@ export async function saveCloudCategories(cats: Category[]): Promise<Category[]>
     console.warn('Cloud category sync PUT warning:', err);
   }
 
-  return cats;
+  return next;
 }
 
-export async function saveCloudCategory(cat: Category): Promise<Category[]> {
+export async function saveCloudCategory(cat: Category): Promise<CategorySyncData> {
   const current = await getCloudCategories();
-  const existingIdx = current.findIndex(c => c.id === cat.id);
-  let updated: Category[];
+  const deletedSet = new Set(current.deletedCategoryIds || []);
+  deletedSet.delete(cat.id);
+
+  const existingIdx = current.customCategories.findIndex(c => c.id === cat.id);
+  let updatedCustom = [...current.customCategories];
   if (existingIdx >= 0) {
-    updated = [...current];
-    updated[existingIdx] = { ...updated[existingIdx], ...cat, updatedAt: new Date().toISOString() };
+    updatedCustom[existingIdx] = normalizeCategory(cat, updatedCustom[existingIdx]);
   } else {
-    updated = [...current, { ...cat, updatedAt: new Date().toISOString() }];
+    updatedCustom.unshift(normalizeCategory(cat));
   }
-  return saveCloudCategories(updated);
+
+  return updateCloudCategories({
+    customCategories: updatedCustom,
+    deletedCategoryIds: Array.from(deletedSet),
+  });
 }
 
-export async function deleteCloudCategory(id: string): Promise<Category[]> {
+export async function deleteCloudCategory(id: string): Promise<CategorySyncData> {
   const current = await getCloudCategories();
-  const updated = current.filter(c => c.id !== id);
-  return saveCloudCategories(updated);
+  const deletedSet = new Set(current.deletedCategoryIds || []);
+  deletedSet.add(id);
+  const updatedCustom = current.customCategories.filter(c => c.id !== id);
+
+  return updateCloudCategories({
+    customCategories: updatedCustom,
+    deletedCategoryIds: Array.from(deletedSet),
+  });
 }
 
-export function mergeWithCloudCategories(baseCats: Category[], cloudCats?: Category[]): Category[] {
-  if (cloudCats && cloudCats.length > 0) {
-    const map = new Map<string, Category>();
-    for (const c of baseCats) {
-      map.set(c.id, c);
+export async function saveCloudCategories(cats: Category[]): Promise<CategorySyncData> {
+  return updateCloudCategories({
+    customCategories: cats.map(c => normalizeCategory(c)),
+  });
+}
+
+export function mergeWithCloudCategories(
+  baseCats: Category[],
+  cloudSync?: CategorySyncData | Category[] | any
+): Category[] {
+  let deletedSet = new Set<string>();
+  let customList: Category[] = [];
+
+  if (cloudSync) {
+    if (Array.isArray(cloudSync)) {
+      customList = cloudSync;
+    } else if (typeof cloudSync === 'object') {
+      if (Array.isArray(cloudSync.deletedCategoryIds)) {
+        deletedSet = new Set(cloudSync.deletedCategoryIds);
+      }
+      if (Array.isArray(cloudSync.customCategories)) {
+        customList = cloudSync.customCategories;
+      } else if (Array.isArray(cloudSync.cats)) {
+        customList = cloudSync.cats;
+      }
     }
-    for (const c of cloudCats) {
-      map.set(c.id, c);
-    }
-    return Array.from(map.values()).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
   }
-  return baseCats;
+
+  const map = new Map<string, Category>();
+
+  // 1. Add base categories that are not deleted
+  for (const c of baseCats) {
+    if (!deletedSet.has(c.id)) {
+      map.set(c.id, normalizeCategory(c));
+    }
+  }
+
+  // 2. Add or override with custom categories that are not deleted
+  for (const c of customList) {
+    if (c && c.id && !deletedSet.has(c.id)) {
+      const existing = map.get(c.id);
+      map.set(c.id, normalizeCategory(c, existing));
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 }
 
 // =========================================================================
