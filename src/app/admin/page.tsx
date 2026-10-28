@@ -475,6 +475,8 @@ export default function AdminDashboard() {
         localDeleted = localDeleted.filter(id => id !== prod.id);
         localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
         localStorage.setItem('dd_deleted_product_ids', JSON.stringify(localDeleted));
+        const updatedList = [prod, ...products.filter(p => p.id !== prod.id)];
+        localStorage.setItem('dd_cached_products', JSON.stringify(updatedList));
         window.dispatchEvent(new Event('dd_products_changed'));
         setProducts(prev => [prod, ...prev.filter(p => p.id !== prod.id)]);
       } catch (err) {
@@ -615,6 +617,8 @@ export default function AdminDashboard() {
       }
       localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
       localStorage.setItem('dd_deleted_product_ids', JSON.stringify(localDeleted));
+      const nextProds = products.filter(p => p.id !== id);
+      localStorage.setItem('dd_cached_products', JSON.stringify(nextProds));
       window.dispatchEvent(new Event('dd_products_changed'));
     } catch (e) {
       console.error(e);
