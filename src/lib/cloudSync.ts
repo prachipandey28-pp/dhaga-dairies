@@ -340,6 +340,50 @@ export function mergeWithCloudCategories(
 // REVIEWS CLOUD SYNC
 // =========================================================================
 
+export function normalizeReview(r: any, fallback?: Partial<Review>): Review {
+  return {
+    id: r?.id || fallback?.id || '',
+    productId: r?.productId ?? r?.pid ?? fallback?.productId ?? null,
+    productName: r?.productName ?? r?.p ?? fallback?.productName ?? 'Handcrafted Crochet',
+    customerName: r?.customerName ?? r?.c ?? fallback?.customerName ?? '',
+    rating: Number(r?.rating ?? r?.r ?? fallback?.rating ?? 5),
+    title: r?.title ?? r?.t ?? fallback?.title ?? '',
+    quote: r?.quote ?? r?.q ?? fallback?.quote ?? '',
+    byline: r?.byline ?? r?.b ?? fallback?.byline ?? '',
+    image: r?.image ?? r?.img ?? fallback?.image ?? '',
+    isApproved: r?.isApproved !== false && r?.a !== false,
+    isVerifiedPurchase: r?.isVerifiedPurchase !== false && r?.v !== false,
+    createdAt: r?.createdAt || fallback?.createdAt || new Date().toISOString(),
+    updatedAt: r?.updatedAt || r?.ts || new Date().toISOString(),
+  };
+}
+
+export function minifyReview(r: Review): any {
+  // Strip heavy base64 strings so restful-api.dev never 500s on 1000-byte limit
+  let img = r.image || '';
+  if (img.startsWith('data:image/')) {
+    img = '';
+  }
+
+  const out: Record<string, any> = {
+    id: r.id,
+    c: r.customerName || '',
+    r: Number(r.rating) || 5,
+    q: r.quote || '',
+  };
+
+  if (r.productId) out.pid = r.productId;
+  if (r.productName && r.productName !== 'Handcrafted Crochet') out.p = r.productName;
+  if (r.title && r.title !== r.productName) out.t = r.title;
+  if (r.byline && !r.byline.includes('CUSTOMER NOTE')) out.b = r.byline;
+  if (img) out.img = img;
+  if (r.isApproved === false) out.a = false;
+  if (r.isVerifiedPurchase === false) out.v = false;
+  if (r.updatedAt) out.ts = r.updatedAt;
+
+  return out;
+}
+
 export async function getCloudReviews(): Promise<ReviewSyncData> {
   const now = Date.now();
   if (inMemoryReviewsSync && now - lastReviewsFetchTime < CACHE_TTL_MS) {
@@ -363,9 +407,14 @@ export async function getCloudReviews(): Promise<ReviewSyncData> {
     if (res.ok) {
       const json = await res.json();
       const data = json?.data || {};
+      const rawCustom = Array.isArray(data.customReviews)
+        ? data.customReviews
+        : (Array.isArray(data.reviews) ? data.reviews : []);
+      const deletedIds = Array.isArray(data.deletedReviewIds) ? data.deletedReviewIds : [];
+
       const result: ReviewSyncData = {
-        customReviews: Array.isArray(data.customReviews) ? data.customReviews : [],
-        deletedReviewIds: Array.isArray(data.deletedReviewIds) ? data.deletedReviewIds : [],
+        customReviews: rawCustom.map((r: any) => normalizeReview(r)),
+        deletedReviewIds: deletedIds,
         updatedAt: data.updatedAt || new Date().toISOString(),
       };
       inMemoryReviewsSync = result;
@@ -382,7 +431,7 @@ export async function getCloudReviews(): Promise<ReviewSyncData> {
 export async function updateCloudReviews(data: Partial<ReviewSyncData>): Promise<ReviewSyncData> {
   const current = await getCloudReviews();
   const next: ReviewSyncData = {
-    customReviews: data.customReviews ?? current.customReviews,
+    customReviews: (data.customReviews ?? current.customReviews).map(r => normalizeReview(r)),
     deletedReviewIds: data.deletedReviewIds ?? current.deletedReviewIds,
     updatedAt: new Date().toISOString(),
   };
@@ -392,6 +441,8 @@ export async function updateCloudReviews(data: Partial<ReviewSyncData>): Promise
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4500);
+    const minifiedCustom = next.customReviews.map(r => minifyReview(r));
+
     await fetch(CLOUD_REVIEWS_SYNC_URL, {
       method: 'PUT',
       headers: {
@@ -400,7 +451,11 @@ export async function updateCloudReviews(data: Partial<ReviewSyncData>): Promise
       },
       body: JSON.stringify({
         name: 'dhaga_reviews',
-        data: next,
+        data: {
+          customReviews: minifiedCustom,
+          deletedReviewIds: next.deletedReviewIds,
+          updatedAt: next.updatedAt,
+        },
       }),
       signal: controller.signal,
     });
@@ -419,10 +474,12 @@ export async function saveCloudReview(review: Review): Promise<ReviewSyncData> {
 
   const existingIdx = current.customReviews.findIndex(r => r.id === review.id);
   let updatedCustom = [...current.customReviews];
+  const normalized = normalizeReview(review, existingIdx >= 0 ? updatedCustom[existingIdx] : undefined);
+
   if (existingIdx >= 0) {
-    updatedCustom[existingIdx] = { ...review, updatedAt: new Date().toISOString() };
+    updatedCustom[existingIdx] = normalized;
   } else {
-    updatedCustom.unshift({ ...review, updatedAt: new Date().toISOString() });
+    updatedCustom.unshift(normalized);
   }
 
   return updateCloudReviews({
@@ -443,19 +500,35 @@ export async function deleteCloudReview(id: string): Promise<ReviewSyncData> {
   });
 }
 
-export function mergeWithCloudReviews(baseReviews: Review[], sync: ReviewSyncData): Review[] {
-  const deletedSet = new Set(sync.deletedReviewIds || []);
-  const map = new Map<string, Review>();
+export function mergeWithCloudReviews(baseReviews: Review[], sync: ReviewSyncData | any): Review[] {
+  let deletedSet = new Set<string>();
+  let customList: any[] = [];
 
-  for (const r of baseReviews) {
-    if (!deletedSet.has(r.id)) {
-      map.set(r.id, r);
+  if (sync) {
+    if (Array.isArray(sync.deletedReviewIds)) {
+      deletedSet = new Set(sync.deletedReviewIds);
+    }
+    if (Array.isArray(sync.customReviews)) {
+      customList = sync.customReviews;
+    } else if (Array.isArray(sync.reviews)) {
+      customList = sync.reviews;
     }
   }
 
-  for (const r of sync.customReviews || []) {
+  const map = new Map<string, Review>();
+
+  // 1. Add base reviews that are not deleted
+  for (const r of baseReviews) {
     if (!deletedSet.has(r.id)) {
-      map.set(r.id, r);
+      map.set(r.id, normalizeReview(r));
+    }
+  }
+
+  // 2. Add or override with custom reviews that are not deleted
+  for (const r of customList) {
+    if (r && r.id && !deletedSet.has(r.id)) {
+      const existing = map.get(r.id);
+      map.set(r.id, normalizeReview(r, existing));
     }
   }
 

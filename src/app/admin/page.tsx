@@ -1279,13 +1279,13 @@ export default function AdminDashboard() {
         window.dispatchEvent(new CustomEvent('dd_reviews_changed', { detail: nextReviews }));
       } catch {}
 
-      fetch('/api/sync', {
+      await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
         body: JSON.stringify({ action: 'save_review', review: savedReview }),
       }).catch(() => {});
 
-      loadAllData();
+      await loadAllData();
     } catch {
       showToast('Error saving review');
     }
@@ -4822,9 +4822,21 @@ Sunflower Stem,Flowers,349,,15,FLW-SF-02,Bright yarn sunflower,https://images.un
               <button
                 className="btn"
                 type="submit"
-                style={{ width: '100%', background: '#570606', color: '#fff5e8', padding: '12px', fontSize: '14px', fontWeight: 600 }}
+                disabled={isUploadingReviewImg}
+                style={{
+                  width: '100%',
+                  background: '#570606',
+                  color: '#fff5e8',
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  opacity: isUploadingReviewImg ? 0.6 : 1,
+                  cursor: isUploadingReviewImg ? 'not-allowed' : 'pointer',
+                }}
               >
-                {editingReviewId ? 'Save Review Changes ✿' : 'Publish New Review ✿'}
+                {isUploadingReviewImg
+                  ? 'Uploading Photo…'
+                  : (editingReviewId ? 'Save Review Changes ✿' : 'Publish New Review ✿')}
               </button>
             </form>
           </div>

@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getReviewById, updateReview, deleteReview } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
-import { getCloudReviews, saveCloudReview, deleteCloudReview, ReviewSyncData } from '@/lib/cloudSync';
+import {
+  getCloudReviews,
+  saveCloudReview,
+  deleteCloudReview,
+  normalizeReview,
+  ReviewSyncData,
+} from '@/lib/cloudSync';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -41,24 +47,23 @@ export async function PUT(
   const { id } = await params;
   try {
     const json = await request.json();
-    const updated = await updateReview(id, json);
-    if (updated) {
-      await saveCloudReview(updated).catch(e => console.warn('Cloud review update error:', e));
-      return NextResponse.json({ success: true, review: updated });
-    }
+    const baseUpdated = await updateReview(id, json).catch(() => null);
+    const cloud = await getCloudReviews().catch(() => ({ customReviews: [], deletedReviewIds: [] as string[] }));
+    const existing =
+      cloud.customReviews.find(r => r.id === id) ||
+      baseUpdated ||
+      (await getReviewById(id).catch(() => null));
 
-    // Fallback: check cloud reviews
-    const cloud = await getCloudReviews();
-    const existing = cloud.customReviews.find(r => r.id === id);
-    if (existing) {
-      const merged = { ...existing, ...json, updatedAt: new Date().toISOString() };
-      await saveCloudReview(merged);
-      return NextResponse.json({ success: true, review: merged });
-    }
+    const merged = normalizeReview(
+      { ...(existing || {}), ...json, id },
+      existing || undefined
+    );
 
-    return NextResponse.json({ error: 'Review not found' }, { status: 404 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to update review' }, { status: 500 });
+    await saveCloudReview(merged).catch(e => console.warn('Cloud review update error:', e));
+    return NextResponse.json({ success: true, review: merged });
+  } catch (error: any) {
+    console.error('Failed to update review:', error);
+    return NextResponse.json({ error: error?.message || 'Failed to update review' }, { status: 500 });
   }
 }
 
@@ -75,7 +80,7 @@ export async function DELETE(
     await deleteReview(id).catch(e => console.warn('Local review delete error:', e));
     await deleteCloudReview(id).catch(e => console.warn('Cloud review delete error:', e));
     return NextResponse.json({ success: true, message: 'Review deleted' });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete review' }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || 'Failed to delete review' }, { status: 500 });
   }
 }
