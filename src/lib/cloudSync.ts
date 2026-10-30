@@ -341,15 +341,17 @@ export function mergeWithCloudCategories(
 // =========================================================================
 
 export function normalizeReview(r: any, fallback?: Partial<Review>): Review {
+  const custName = r?.customerName ?? r?.c ?? fallback?.customerName ?? '';
+  const prodName = r?.productName ?? r?.p ?? fallback?.productName ?? 'Handcrafted Crochet';
   return {
     id: r?.id || fallback?.id || '',
     productId: r?.productId ?? r?.pid ?? fallback?.productId ?? null,
-    productName: r?.productName ?? r?.p ?? fallback?.productName ?? 'Handcrafted Crochet',
-    customerName: r?.customerName ?? r?.c ?? fallback?.customerName ?? '',
+    productName: prodName,
+    customerName: custName,
     rating: Number(r?.rating ?? r?.r ?? fallback?.rating ?? 5),
-    title: r?.title ?? r?.t ?? fallback?.title ?? '',
+    title: r?.title || r?.t || fallback?.title || prodName,
     quote: r?.quote ?? r?.q ?? fallback?.quote ?? '',
-    byline: r?.byline ?? r?.b ?? fallback?.byline ?? '',
+    byline: r?.byline || r?.b || fallback?.byline || (custName ? `— ${custName.toUpperCase()}` : '— CUSTOMER NOTE'),
     image: r?.image ?? r?.img ?? fallback?.image ?? '',
     isApproved: r?.isApproved !== false && r?.a !== false,
     isVerifiedPurchase: r?.isVerifiedPurchase !== false && r?.v !== false,
