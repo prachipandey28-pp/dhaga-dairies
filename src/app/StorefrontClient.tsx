@@ -1292,9 +1292,6 @@ export default function StorefrontClient({
             <h3>Customer Care</h3>
             <strong>We&apos;re happy to help</strong>
             <p>
-              Phone: <a href="tel:+919137407394">+91 91374 07394</a>
-            </p>
-            <p>
               WhatsApp:{' '}
               <a href="https://wa.me/919137407394" target="_blank" rel="noreferrer">
                 Chat on WhatsApp ↗
