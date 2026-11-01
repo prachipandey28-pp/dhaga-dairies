@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getReviews, createReview, getProductById } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
@@ -101,9 +102,14 @@ export async function POST(request: Request) {
     // Cloud persistence
     await saveCloudReview(newRev).catch(e => console.warn('Cloud review save error:', e));
 
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
+
     return NextResponse.json({ success: true, review: newRev }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating review:', error);
-    return NextResponse.json({ error: 'Failed to create review' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to create review' }, { status: 500 });
   }
 }

@@ -168,31 +168,13 @@ export default function StorefrontClient({
 }: StorefrontClientProps) {
   const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919137407394';
 
-  // Pre-populated state initialized directly with server-rendered live data
+  // Pre-populated state initialized directly with server-rendered live data (no stale cache flash)
   const [products, setProducts] = useState<Product[]>(() => {
     if (initialProducts && initialProducts.length > 0) return initialProducts;
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('dd_cached_products');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch {}
-    }
     return STARTER_PRODUCTS;
   });
   const [categories, setCategories] = useState<Category[]>(() => {
     if (initialCategories && initialCategories.length > 0) return initialCategories;
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('dd_cached_categories');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch {}
-    }
     return STARTER_CATEGORIES;
   });
   const [collections, setCollections] = useState<Collection[]>(() => {
@@ -201,15 +183,6 @@ export default function StorefrontClient({
   });
   const [reviews, setReviews] = useState<Review[]>(() => {
     if (initialReviews && initialReviews.length > 0) return initialReviews;
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('dd_cached_reviews');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch {}
-    }
     return [];
   });
   const [bannerOffer, setBannerOffer] = useState<Offer | null>(initialBanner);
@@ -371,8 +344,8 @@ export default function StorefrontClient({
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) setProducts(initialProducts);
     if (initialCategories && initialCategories.length > 0) setCategories(initialCategories);
-    if (initialCollections && initialCollections.length > 0) setCollections(initialCollections);
-    if (initialReviews && initialReviews.length > 0) setReviews(initialReviews);
+    if (initialCollections !== undefined) setCollections(initialCollections);
+    if (initialReviews !== undefined) setReviews(initialReviews);
     if (initialBanner !== undefined) setBannerOffer(initialBanner);
   }, [initialProducts, initialCategories, initialCollections, initialReviews, initialBanner]);
 

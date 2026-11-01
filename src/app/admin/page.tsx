@@ -194,6 +194,43 @@ export default function AdminDashboard() {
     isVerifiedPurchase: true,
   });
 
+  const [dbHealth, setDbHealth] = useState<{
+    status: 'checking' | 'connected' | 'unconfigured' | 'error';
+    message: string;
+    latencyMs?: number;
+    tables?: Record<string, boolean>;
+    storageBucket?: boolean;
+    missingTables?: string[];
+    supabaseUrl?: string;
+  }>({ status: 'checking', message: 'Checking database connection...' });
+  const [isTestingDb, setIsTestingDb] = useState(false);
+
+  const checkDbHealth = async () => {
+    setIsTestingDb(true);
+    try {
+      const res = await fetch(`/api/admin/db-health?t=${Date.now()}`, {
+        headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDbHealth(data);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setDbHealth({
+          status: 'error',
+          message: data.message || 'Database health check failed',
+          tables: data.tables,
+          missingTables: data.missingTables,
+        });
+      }
+    } catch (err: any) {
+      setDbHealth({ status: 'error', message: err?.message || 'Network error reaching health endpoint' });
+    } finally {
+      setIsTestingDb(false);
+    }
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
@@ -204,6 +241,7 @@ export default function AdminDashboard() {
   // Check auth session on mount
   useEffect(() => {
     checkAuth();
+    checkDbHealth();
     // Hydrate local cache immediately for instant zero-delay loading
     try {
       const localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
@@ -232,6 +270,7 @@ export default function AdminDashboard() {
         setIsAuthenticated(true);
         setCurrentUser(data.user);
         loadAllData();
+        checkDbHealth();
       } else {
         setIsAuthenticated(false);
       }
@@ -495,18 +534,10 @@ export default function AdminDashboard() {
           body: JSON.stringify(payload),
         });
         const resData = await res.json().catch(() => ({}));
-        const updatedProduct: Product = (res.ok && resData.product) ? resData.product : {
-          ...payload,
-          id: editingProductId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-          body: JSON.stringify({ action: 'save', product: updatedProduct }),
-        }).catch(() => {});
-        saveToLocalStorage(updatedProduct);
+        if (!res.ok) {
+          showToast(resData.error || 'Failed to update product in database');
+          return;
+        }
         showToast('Product updated successfully ✿');
         setIsProductModalOpen(false);
         resetProductForm();
@@ -521,43 +552,18 @@ export default function AdminDashboard() {
           body: JSON.stringify(payload),
         });
         const resData = await res.json().catch(() => ({}));
-        const newProduct: Product = (res.ok && resData.product) ? resData.product : {
-          ...payload,
-          id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `prod-${Date.now()}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-          body: JSON.stringify({ action: 'save', product: newProduct }),
-        }).catch(() => {});
-        saveToLocalStorage(newProduct);
+        if (!res.ok) {
+          showToast(resData.error || 'Failed to create product in database');
+          return;
+        }
         showToast('New product added to catalog ✿');
         setIsProductModalOpen(false);
         resetProductForm();
         loadAllData();
       }
     } catch (err: any) {
-      console.warn('Server sync error, saved locally:', err);
-      const fallbackProduct: Product = {
-        ...payload,
-        id: editingProductId || `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `prod-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-        body: JSON.stringify({ action: 'save', product: fallbackProduct }),
-      }).catch(() => {});
-      saveToLocalStorage(fallbackProduct);
-      showToast('Product saved successfully ✿');
-      setIsProductModalOpen(false);
-      resetProductForm();
-      loadAllData();
+      console.error('Product save error:', err);
+      showToast(err?.message || 'Error saving product');
     }
   };
 
@@ -606,73 +612,45 @@ export default function AdminDashboard() {
 
   const handleDeleteProduct = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to permanently delete "${name}" from the database?`)) return;
-    
-    // Immediate local removal so user gets instant 0ms feedback!
-    try {
-      let localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
-      let localDeleted: string[] = JSON.parse(localStorage.getItem('dd_deleted_product_ids') || '[]');
-      localCustom = localCustom.filter(p => p.id !== id);
-      if (!localDeleted.includes(id)) {
-        localDeleted.push(id);
-      }
-      localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
-      localStorage.setItem('dd_deleted_product_ids', JSON.stringify(localDeleted));
-      const nextProds = products.filter(p => p.id !== id);
-      localStorage.setItem('dd_cached_products', JSON.stringify(nextProds));
-      window.dispatchEvent(new Event('dd_products_changed'));
-    } catch (e) {
-      console.error(e);
-    }
-    setProducts(prev => prev.filter(p => p.id !== id));
-    showToast(`"${name}" removed from database ✿`);
 
     try {
-      await fetch(`/api/products/${id}`, {
+      const res = await fetch(`/api/products/${id}`, {
         method: 'DELETE',
         headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
       });
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-        body: JSON.stringify({ action: 'delete', productId: id }),
-      });
-    } catch (e) {
-      console.warn('Backend delete sync:', e);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Failed to delete product from database');
+        return;
+      }
+      setProducts(prev => prev.filter(p => p.id !== id));
+      showToast(`"${name}" removed from database ✿`);
+      loadAllData();
+    } catch (e: any) {
+      console.error('Delete product error:', e);
+      showToast(e?.message || 'Error deleting product');
     }
-    loadAllData();
   };
 
   const handleTogglePublishProduct = async (p: Product) => {
     const updated = !p.isPublished;
     try {
-      let localCustom: Product[] = JSON.parse(localStorage.getItem('dd_custom_products') || '[]');
-      const idx = localCustom.findIndex(item => item.id === p.id);
-      if (idx >= 0) {
-        localCustom[idx].isPublished = updated;
-      } else {
-        localCustom.push({ ...p, isPublished: updated });
-      }
-      localStorage.setItem('dd_custom_products', JSON.stringify(localCustom));
-      window.dispatchEvent(new Event('dd_products_changed'));
-    } catch (e) {
-      console.error(e);
-    }
-    setProducts(prev => prev.map(item => item.id === p.id ? { ...item, isPublished: updated } : item));
-    showToast(`Product ${updated ? 'activated on storefront' : 'hidden from public'} ✿`);
-
-    try {
-      await fetch(`/api/products/${p.id}`, {
+      const res = await fetch(`/api/products/${p.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
         body: JSON.stringify({ isPublished: updated }),
       });
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-        body: JSON.stringify({ action: 'update', product: { ...p, isPublished: updated } }),
-      });
-    } catch {}
-    loadAllData();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update product visibility');
+        return;
+      }
+      setProducts(prev => prev.map(item => item.id === p.id ? { ...item, isPublished: updated } : item));
+      showToast(`Product ${updated ? 'activated on storefront' : 'hidden from public'} ✿`);
+      loadAllData();
+    } catch (err: any) {
+      showToast(err?.message || 'Error updating product');
+    }
   };
 
   // CSV Export
@@ -786,30 +764,9 @@ export default function AdminDashboard() {
         isActive: categoryForm.isActive !== false,
       };
 
-      // 1. Immediate local state & localStorage update for 0ms multi-tab sync!
-      setCategories(prev => {
-        const existingIdx = prev.findIndex(c => c.id === targetId);
-        let updated: Category[];
-        if (existingIdx >= 0) {
-          updated = [...prev];
-          updated[existingIdx] = { ...updated[existingIdx], ...payload };
-        } else {
-          updated = [...prev, payload];
-        }
-        updated.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-        try {
-          localStorage.setItem('dd_cached_categories', JSON.stringify(updated));
-          window.dispatchEvent(new Event('dd_categories_changed'));
-        } catch {}
-        return updated;
-      });
-
-      setIsCategoryModalOpen(false);
-      showToast(editingCategoryId ? 'Category updated ✿' : 'New category created ✿');
-
-      // 2. Persist to API & Cloud Sync
+      let res: Response;
       if (editingCategoryId) {
-        await fetch(`/api/categories/${editingCategoryId}`, {
+        res = await fetch(`/api/categories/${editingCategoryId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -818,7 +775,7 @@ export default function AdminDashboard() {
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch('/api/categories', {
+        res = await fetch('/api/categories', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -828,20 +785,19 @@ export default function AdminDashboard() {
         });
       }
 
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-key': 'dhaga_admin_master_2026',
-        },
-        body: JSON.stringify({ action: 'save_category', category: payload }),
-      }).catch(() => {});
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(resData.error || 'Failed to save category');
+        return;
+      }
 
+      setIsCategoryModalOpen(false);
+      showToast(editingCategoryId ? 'Category updated ✿' : 'New category created ✿');
       resetCategoryForm();
       loadAllData();
     } catch (err: any) {
-      console.error(err);
-      showToast('Error saving category');
+      console.error('Category save error:', err);
+      showToast(err?.message || 'Error saving category');
     }
   };
 
@@ -904,39 +860,22 @@ export default function AdminDashboard() {
   const handleDeleteCategory = async (id: string, name: string) => {
     if (!confirm(`Delete category "${name}"?`)) return;
     try {
-      // 1. Immediate local update
-      setCategories(prev => {
-        const updated = prev.filter(c => c.id !== id);
-        try {
-          localStorage.setItem('dd_cached_categories', JSON.stringify(updated));
-          window.dispatchEvent(new Event('dd_categories_changed'));
-        } catch {}
-        return updated;
-      });
-      showToast('Category deleted ✿');
-
-      // 2. Persist to API & Cloud Sync
       const res = await fetch(`/api/categories/${id}`, {
         method: 'DELETE',
         headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok && data.error) {
-        alert(data.error);
+      if (!res.ok) {
+        alert(data.error || 'Cannot delete category');
+        showToast(data.error || 'Error deleting category');
+        return;
       }
 
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-key': 'dhaga_admin_master_2026',
-        },
-        body: JSON.stringify({ action: 'delete_category', categoryId: id }),
-      }).catch(() => {});
-
+      setCategories(prev => prev.filter(c => c.id !== id));
+      showToast('Category deleted ✿');
       loadAllData();
-    } catch {
-      showToast('Error deleting category');
+    } catch (err: any) {
+      showToast(err?.message || 'Error deleting category');
     }
   };
 
@@ -961,31 +900,40 @@ export default function AdminDashboard() {
     };
 
     try {
+      let res: Response;
       if (editingOfferId) {
-        const res = await fetch(`/api/offers/${editingOfferId}`, {
+        res = await fetch(`/api/offers/${editingOfferId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
           body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          showToast('Offer updated ✿');
-          setIsOfferModalOpen(false);
-        }
       } else {
-        const res = await fetch('/api/offers', {
+        res = await fetch('/api/offers', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
           body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          showToast('New promotion created ✿');
-          setIsOfferModalOpen(false);
-        }
       }
+
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(resData.error || 'Failed to save offer');
+        return;
+      }
+
+      showToast(editingOfferId ? 'Offer updated ✿' : 'New promotion created ✿');
+      setIsOfferModalOpen(false);
       resetOfferForm();
       loadAllData();
-    } catch {
-      showToast('Error saving offer');
+    } catch (err: any) {
+      console.error('Offer save error:', err);
+      showToast(err?.message || 'Error saving offer');
     }
   };
 
@@ -1026,10 +974,20 @@ export default function AdminDashboard() {
 
   const handleDeleteOffer = async (id: string, title: string) => {
     if (!confirm(`Delete offer "${title}"?`)) return;
-    const res = await fetch(`/api/offers/${id}`, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/offers/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Failed to delete offer');
+        return;
+      }
       showToast('Offer removed ✿');
       loadAllData();
+    } catch (err: any) {
+      showToast(err?.message || 'Error deleting offer');
     }
   };
 
@@ -1052,31 +1010,40 @@ export default function AdminDashboard() {
     };
 
     try {
+      let res: Response;
       if (editingCouponId) {
-        const res = await fetch(`/api/coupons/${editingCouponId}`, {
+        res = await fetch(`/api/coupons/${editingCouponId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
           body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          showToast('Coupon updated ✿');
-          setIsCouponModalOpen(false);
-        }
       } else {
-        const res = await fetch('/api/coupons', {
+        res = await fetch('/api/coupons', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': 'dhaga_admin_master_2026',
+          },
           body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          showToast('Coupon code generated ✿');
-          setIsCouponModalOpen(false);
-        }
       }
+
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(resData.error || 'Failed to save coupon');
+        return;
+      }
+
+      showToast(editingCouponId ? 'Coupon updated ✿' : 'Coupon code generated ✿');
+      setIsCouponModalOpen(false);
       resetCouponForm();
       loadAllData();
-    } catch {
-      showToast('Error saving coupon');
+    } catch (err: any) {
+      console.error('Coupon save error:', err);
+      showToast(err?.message || 'Error saving coupon');
     }
   };
 
@@ -1121,10 +1088,20 @@ export default function AdminDashboard() {
 
   const handleDeleteCoupon = async (id: string, code: string) => {
     if (!confirm(`Delete coupon "${code}"?`)) return;
-    const res = await fetch(`/api/coupons/${id}`, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/coupons/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Failed to delete coupon');
+        return;
+      }
       showToast(`Coupon ${code} removed ✿`);
       loadAllData();
+    } catch (err: any) {
+      showToast(err?.message || 'Error deleting coupon');
     }
   };
 
@@ -1136,18 +1113,22 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': 'dhaga_admin_master_2026',
+        },
         body: JSON.stringify({ orderStatus: newStatus }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showToast(`Order status updated to ${newStatus} ✿`);
         loadAllData();
       } else {
         alert(data.error || 'Failed to update order status');
+        showToast(data.error || 'Failed to update order status');
       }
-    } catch {
-      showToast('Error updating order');
+    } catch (err: any) {
+      showToast(err?.message || 'Error updating order');
     }
   };
 
@@ -1230,14 +1211,9 @@ export default function AdminDashboard() {
     };
 
     try {
-      let savedReview: Review;
+      let res: Response;
       if (editingReviewId) {
-        setReviews(prev =>
-          prev.map(r => (r.id === editingReviewId ? { ...r, ...payload, updatedAt: new Date().toISOString() } : r))
-        );
-        setIsReviewModalOpen(false);
-
-        const res = await fetch(`/api/reviews/${editingReviewId}`, {
+        res = await fetch(`/api/reviews/${editingReviewId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -1245,20 +1221,8 @@ export default function AdminDashboard() {
           },
           body: JSON.stringify(payload),
         });
-        const d = await res.json().catch(() => ({}));
-        savedReview = d.review || { id: editingReviewId, ...payload, createdAt: new Date().toISOString() };
-        showToast('Review updated successfully ✿');
       } else {
-        const tempId = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        const newRev: Review = {
-          id: tempId,
-          ...payload,
-          createdAt: new Date().toISOString(),
-        };
-        setReviews(prev => [newRev, ...prev]);
-        setIsReviewModalOpen(false);
-
-        const res = await fetch('/api/reviews', {
+        res = await fetch('/api/reviews', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1266,82 +1230,65 @@ export default function AdminDashboard() {
           },
           body: JSON.stringify(payload),
         });
-        const d = await res.json().catch(() => ({}));
-        savedReview = d.review || newRev;
-        showToast('New review added successfully ✿');
       }
 
-      try {
-        const nextReviews = editingReviewId
-          ? reviews.map(r => (r.id === editingReviewId ? savedReview : r))
-          : [savedReview, ...reviews.filter(r => r.id !== savedReview.id)];
-        localStorage.setItem('dd_cached_reviews', JSON.stringify(nextReviews));
-        window.dispatchEvent(new CustomEvent('dd_reviews_changed', { detail: nextReviews }));
-      } catch {}
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(d.error || 'Failed to save review in database');
+        return;
+      }
 
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-        body: JSON.stringify({ action: 'save_review', review: savedReview }),
-      }).catch(() => {});
-
-      await loadAllData();
-    } catch {
-      showToast('Error saving review');
+      setIsReviewModalOpen(false);
+      showToast(editingReviewId ? 'Review updated successfully ✿' : 'New review added successfully ✿');
+      loadAllData();
+    } catch (err: any) {
+      console.error('Review save error:', err);
+      showToast(err?.message || 'Error saving review');
     }
   };
 
   const handleToggleApproveReview = async (r: Review) => {
     const updated = !r.isApproved;
-    const updatedRev = { ...r, isApproved: updated };
-    setReviews(prev => prev.map(item => (item.id === r.id ? updatedRev : item)));
-
     try {
-      const nextReviews = reviews.map(item => (item.id === r.id ? updatedRev : item));
-      localStorage.setItem('dd_cached_reviews', JSON.stringify(nextReviews));
-      window.dispatchEvent(new CustomEvent('dd_reviews_changed', { detail: nextReviews }));
-    } catch {}
-
-    await fetch(`/api/reviews/${r.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-key': 'dhaga_admin_master_2026',
-      },
-      body: JSON.stringify({ isApproved: updated }),
-    }).catch(() => {});
-
-    fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-      body: JSON.stringify({ action: 'save_review', review: updatedRev }),
-    }).catch(() => {});
-
-    showToast(`Review ${updated ? 'approved for display' : 'hidden'} ✿`);
+      const res = await fetch(`/api/reviews/${r.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': 'dhaga_admin_master_2026',
+        },
+        body: JSON.stringify({ isApproved: updated }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update review approval');
+        return;
+      }
+      setReviews(prev => prev.map(item => (item.id === r.id ? { ...item, isApproved: updated } : item)));
+      showToast(`Review ${updated ? 'approved for display' : 'hidden'} ✿`);
+      loadAllData();
+    } catch (err: any) {
+      showToast(err?.message || 'Error updating review');
+    }
   };
 
   const handleDeleteReview = async (id: string) => {
     if (!confirm('Are you sure you want to delete this customer review?')) return;
-    setReviews(prev => prev.filter(r => r.id !== id));
-
     try {
-      const nextReviews = reviews.filter(r => r.id !== id);
-      localStorage.setItem('dd_cached_reviews', JSON.stringify(nextReviews));
-      window.dispatchEvent(new CustomEvent('dd_reviews_changed', { detail: nextReviews }));
-    } catch {}
-
-    await fetch(`/api/reviews/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
-    }).catch(() => {});
-
-    fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': 'dhaga_admin_master_2026' },
-      body: JSON.stringify({ action: 'delete_review', id }),
-    }).catch(() => {});
-
-    showToast('Review deleted ✿');
+      const res = await fetch(`/api/reviews/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': 'dhaga_admin_master_2026' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Failed to delete review');
+        return;
+      }
+      setReviews(prev => prev.filter(r => r.id !== id));
+      showToast('Review deleted ✿');
+      loadAllData();
+    } catch (err: any) {
+      showToast(err?.message || 'Error deleting review');
+    }
   };
 
   // Filtered Lists
@@ -1635,20 +1582,51 @@ export default function AdminDashboard() {
         </div>
 
         <div className="admin-header-cluster" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          {/* Mode Pill */}
-          <span
+          {/* Live DB Health Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              checkDbHealth();
+              setActiveTab('setup');
+            }}
             className="admin-db-pill"
             style={{
               fontSize: '11px',
-              padding: '4px 10px',
+              padding: '4px 12px',
               borderRadius: '999px',
-              background: '#3d0808',
-              border: '1px solid #8d3430',
-              color: '#d8b66d',
+              background:
+                dbHealth.status === 'connected'
+                  ? 'rgba(6, 78, 59, 0.85)'
+                  : dbHealth.status === 'checking'
+                  ? 'rgba(120, 53, 15, 0.85)'
+                  : 'rgba(127, 29, 29, 0.85)',
+              border:
+                dbHealth.status === 'connected'
+                  ? '1px solid #10b981'
+                  : dbHealth.status === 'checking'
+                  ? '1px solid #f59e0b'
+                  : '1px solid #ef4444',
+              color:
+                dbHealth.status === 'connected'
+                  ? '#a7f3d0'
+                  : dbHealth.status === 'checking'
+                  ? '#fde68a'
+                  : '#fecaca',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 500,
             }}
+            title={`${dbHealth.message} (Click to inspect / test DB)`}
           >
-            ● PostgreSQL DB Active
-          </span>
+            <span style={{ fontSize: '8px' }}>●</span>
+            {dbHealth.status === 'connected'
+              ? `Supabase DB Live (${dbHealth.latencyMs || 0}ms)`
+              : dbHealth.status === 'checking'
+              ? 'Checking DB...'
+              : 'Supabase DB Inactive'}
+          </button>
 
           <span style={{ fontSize: '13px' }}>
             ✿ {currentUser?.name || 'Admin'} <small style={{ opacity: 0.7 }}>({currentUser?.role || 'admin'})</small>
@@ -3593,6 +3571,107 @@ export default function AdminDashboard() {
             <p style={{ color: 'var(--muted)', fontSize: '13px', margin: '0 0 20px' }}>
               Follow these simple steps to link your Supabase project and enable full live database synchronization.
             </p>
+
+            {/* Live Database Diagnostic Card */}
+            <div
+              style={{
+                background: dbHealth.status === 'connected' ? '#f0fdf4' : dbHealth.status === 'checking' ? '#fffbeb' : '#fef2f2',
+                borderRadius: '10px',
+                border: dbHealth.status === 'connected' ? '1px solid #86efac' : dbHealth.status === 'checking' ? '1px solid #fde68a' : '1px solid #fca5a5',
+                padding: '20px',
+                marginBottom: '24px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        background: dbHealth.status === 'connected' ? '#16a34a' : dbHealth.status === 'checking' ? '#d97706' : '#dc2626',
+                      }}
+                    />
+                    <strong style={{ fontSize: '15px', color: '#1f2937' }}>
+                      {dbHealth.status === 'connected'
+                        ? 'Supabase PostgreSQL Database Connected'
+                        : dbHealth.status === 'checking'
+                        ? 'Connecting & Verifying Database...'
+                        : 'Database Not Connected / Inactive'}
+                    </strong>
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#4b5563' }}>
+                    {dbHealth.message}
+                    {dbHealth.latencyMs !== undefined && ` • Response latency: ${dbHealth.latencyMs}ms`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isTestingDb}
+                  onClick={checkDbHealth}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #570606',
+                    background: '#570606',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: isTestingDb ? 'not-allowed' : 'pointer',
+                    opacity: isTestingDb ? 0.7 : 1,
+                  }}
+                >
+                  {isTestingDb ? '⏳ Testing Connection...' : '⚡ Test Connection Now'}
+                </button>
+              </div>
+
+              {dbHealth.tables && (
+                <div style={{ marginTop: '16px', borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '12px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: '#374151' }}>
+                    Table Schemas Verification (13 Tables & Storage):
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                    {Object.entries(dbHealth.tables).map(([table, exists]) => (
+                      <div
+                        key={table}
+                        style={{
+                          fontSize: '11px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: exists ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          color: exists ? '#15803d' : '#b91c1c',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        <span>{exists ? '✓' : '✗'}</span>
+                        <span>{table}</span>
+                      </div>
+                    ))}
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: dbHealth.storageBucket ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: dbHealth.storageBucket ? '#15803d' : '#b91c1c',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      <span>{dbHealth.storageBucket ? '✓' : '✗'}</span>
+                      <span>product-images (bucket)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div
               style={{

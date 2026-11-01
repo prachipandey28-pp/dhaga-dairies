@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getProducts, createProduct } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
@@ -112,6 +113,11 @@ export async function POST(request: Request) {
 
     // Cloud sync persistence
     await saveCloudCustomProduct(newProduct).catch(e => console.warn('Cloud save error:', e));
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
 
     return NextResponse.json({ success: true, product: newProduct }, { status: 201 });
   } catch (error: any) {

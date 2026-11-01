@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getCategoryById, updateCategory, deleteCategory } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
@@ -65,7 +66,7 @@ export async function PUT(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const baseUpdated = await updateCategory(id, parsed.data).catch(() => null);
+    const baseUpdated = await updateCategory(id, parsed.data);
     const cloudData = await getCloudCategories().catch(() => ({ customCategories: [], deletedCategoryIds: [] } as CategorySyncData));
     const existing = cloudData.customCategories?.find(c => c.id === id) || baseUpdated || (await getCategoryById(id).catch(() => null));
 
@@ -75,6 +76,12 @@ export async function PUT(
     );
 
     await saveCloudCategory(mergedCategory).catch(e => console.warn('Cloud cat update warning:', e));
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
+
     return NextResponse.json({ success: true, category: mergedCategory });
   } catch (error: any) {
     console.error('Error updating category:', error);
@@ -94,8 +101,17 @@ export async function DELETE(
 
   const { id } = await params;
   try {
-    await deleteCategory(id).catch(() => {});
+    const result = await deleteCategory(id);
+    if (!result.success) {
+      return NextResponse.json({ error: result.message || 'Cannot delete category' }, { status: 400 });
+    }
+
     await deleteCloudCategory(id).catch(e => console.warn('Cloud cat delete warning:', e));
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
 
     return NextResponse.json({ success: true, message: 'Category deleted successfully' });
   } catch (error: any) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getReviewById, updateReview, deleteReview } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
 import {
@@ -47,7 +48,7 @@ export async function PUT(
   const { id } = await params;
   try {
     const json = await request.json();
-    const baseUpdated = await updateReview(id, json).catch(() => null);
+    const baseUpdated = await updateReview(id, json);
     const cloud = await getCloudReviews().catch(() => ({ customReviews: [], deletedReviewIds: [] as string[] }));
     const existing =
       cloud.customReviews.find(r => r.id === id) ||
@@ -60,6 +61,12 @@ export async function PUT(
     );
 
     await saveCloudReview(merged).catch(e => console.warn('Cloud review update error:', e));
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
+
     return NextResponse.json({ success: true, review: merged });
   } catch (error: any) {
     console.error('Failed to update review:', error);
@@ -77,10 +84,17 @@ export async function DELETE(
 
   const { id } = await params;
   try {
-    await deleteReview(id).catch(e => console.warn('Local review delete error:', e));
+    await deleteReview(id);
     await deleteCloudReview(id).catch(e => console.warn('Cloud review delete error:', e));
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
+
     return NextResponse.json({ success: true, message: 'Review deleted' });
   } catch (error: any) {
+    console.error('Failed to delete review:', error);
     return NextResponse.json({ error: error?.message || 'Failed to delete review' }, { status: 500 });
   }
 }

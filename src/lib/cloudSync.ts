@@ -1,4 +1,5 @@
 import { Product, Category, Review } from '@/types';
+import { isSupabaseConfigured } from './supabase';
 
 const CLOUD_PRODUCT_SYNC_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a1771b37221023';
 const CLOUD_CAT_SYNC_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a17e1dd81e29fd';
@@ -39,6 +40,11 @@ const CACHE_TTL_MS = 2000;
 // =========================================================================
 
 export async function getCloudSync(): Promise<CloudSyncData> {
+  // If Supabase PostgreSQL is configured, it is the sole authority
+  if (isSupabaseConfigured()) {
+    return { deletedProductIds: [], customProducts: [], updatedAt: new Date().toISOString() };
+  }
+
   const now = Date.now();
   if (inMemoryProductSync && now - lastProductFetchTime < CACHE_TTL_MS) {
     return inMemoryProductSync;
@@ -141,6 +147,9 @@ export async function saveCloudCustomProduct(product: Product): Promise<CloudSyn
 }
 
 export function mergeWithCloudSync(baseProducts: Product[], sync: CloudSyncData): Product[] {
+  if (isSupabaseConfigured()) {
+    return baseProducts;
+  }
   const deletedSet = new Set(sync.deletedProductIds || []);
   const map = new Map<string, Product>();
 
@@ -181,6 +190,10 @@ export function normalizeCategory(c: any, fallback?: Partial<Category>): Categor
 }
 
 export async function getCloudCategories(): Promise<CategorySyncData> {
+  if (isSupabaseConfigured()) {
+    return { customCategories: [], deletedCategoryIds: [], updatedAt: new Date().toISOString() };
+  }
+
   const now = Date.now();
   if (inMemoryCategorySync && now - lastCategoryFetchTime < CACHE_TTL_MS) {
     return inMemoryCategorySync;
@@ -298,6 +311,9 @@ export function mergeWithCloudCategories(
   baseCats: Category[],
   cloudSync?: CategorySyncData | Category[] | any
 ): Category[] {
+  if (isSupabaseConfigured()) {
+    return baseCats;
+  }
   let deletedSet = new Set<string>();
   let customList: Category[] = [];
 
@@ -389,6 +405,10 @@ export function minifyReview(r: Review): any {
 }
 
 export async function getCloudReviews(): Promise<ReviewSyncData> {
+  if (isSupabaseConfigured()) {
+    return { customReviews: [], deletedReviewIds: [], updatedAt: new Date().toISOString() };
+  }
+
   const now = Date.now();
   if (inMemoryReviewsSync && now - lastReviewsFetchTime < CACHE_TTL_MS) {
     return inMemoryReviewsSync;
@@ -511,6 +531,9 @@ export async function deleteCloudReview(id: string): Promise<ReviewSyncData> {
 }
 
 export function mergeWithCloudReviews(baseReviews: Review[], sync: ReviewSyncData | any): Review[] {
+  if (isSupabaseConfigured()) {
+    return baseReviews;
+  }
   let deletedSet = new Set<string>();
   let customList: any[] = [];
 

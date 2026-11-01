@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getProducts, getCategories, getCollections, getReviews, getOffers } from '@/lib/db';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import {
   getCloudSync,
   mergeWithCloudSync,
@@ -16,6 +17,39 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
+    if (isSupabaseConfigured()) {
+      const [rawProducts, rawCategories, collections, rawReviews, offers] = await Promise.all([
+        getProducts({ onlyPublished: true }).catch(() => []),
+        getCategories(true).catch(() => []),
+        getCollections().catch(() => []),
+        getReviews(true).catch(() => []),
+        getOffers(true).catch(() => []),
+      ]);
+
+      const products = rawProducts.filter(p => p.isPublished);
+      const categories = rawCategories.filter(c => c.isActive);
+      const reviews = rawReviews.filter(r => r.isApproved);
+      const bannerOffer = offers.find(o => o.isBannerActive && o.isActive) || null;
+
+      return NextResponse.json(
+        {
+          products,
+          categories,
+          collections,
+          reviews,
+          banner: bannerOffer,
+          cloudSyncVersion: new Date().toISOString(),
+        },
+        {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
+        }
+      );
+    }
+
     const [rawProducts, rawCategories, collections, rawReviews, offers, cloudSync, cloudCats, cloudReviews] = await Promise.all([
       getProducts({ onlyPublished: true }).catch(() => []),
       getCategories(true).catch(() => []),

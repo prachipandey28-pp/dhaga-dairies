@@ -1,5 +1,6 @@
 import StorefrontClient from './StorefrontClient';
 import { getProducts, getCategories, getCollections, getReviews, getOffers } from '@/lib/db';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import {
   getCloudSync,
   mergeWithCloudSync,
@@ -15,6 +16,33 @@ export const fetchCache = 'force-no-store';
 export const revalidate = 0;
 
 export default async function Page() {
+  const isSupa = isSupabaseConfigured();
+
+  if (isSupa) {
+    const [rawProducts, rawCategories, collections, rawReviews, offers] = await Promise.all([
+      getProducts({ onlyPublished: true }).catch(() => []),
+      getCategories(true).catch(() => []),
+      getCollections().catch(() => []),
+      getReviews(true).catch(() => []),
+      getOffers(true).catch(() => []),
+    ]);
+
+    const products = rawProducts.filter(p => p.isPublished);
+    const categories = rawCategories.filter(c => c.isActive);
+    const reviews = rawReviews.filter(r => r.isApproved);
+    const banner = offers.find(o => o.isBannerActive && o.isActive) || null;
+
+    return (
+      <StorefrontClient
+        initialProducts={products}
+        initialCategories={categories}
+        initialCollections={collections}
+        initialReviews={reviews}
+        initialBanner={banner}
+      />
+    );
+  }
+
   const [rawProducts, rawCategories, collections, rawReviews, offers, cloudSync, cloudCats, cloudReviews] = await Promise.all([
     getProducts({ onlyPublished: true }).catch(() => []),
     getCategories(true).catch(() => []),

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getCategories, createCategory } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
@@ -73,6 +74,11 @@ export async function POST(request: Request) {
 
     // Cloud sync persistence
     await saveCloudCategory(newCategory).catch(e => console.warn('Cloud category save warning:', e));
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
 
     return NextResponse.json({ success: true, category: newCategory }, { status: 201 });
   } catch (error: any) {

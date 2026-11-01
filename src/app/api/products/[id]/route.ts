@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getProductById, updateProduct, deleteProduct } from '@/lib/db';
 import { getAdminSession } from '@/lib/auth';
 import { addCloudDeletedId, saveCloudCustomProduct, getCloudSync } from '@/lib/cloudSync';
@@ -48,6 +49,10 @@ export async function PUT(
     // Cloud sync persistence
     if (updated) {
       await saveCloudCustomProduct(updated).catch(e => console.warn('Cloud update error:', e));
+      try {
+        revalidatePath('/', 'page');
+        revalidatePath('/admin', 'page');
+      } catch {}
       return NextResponse.json({ success: true, product: updated });
     }
 
@@ -57,12 +62,17 @@ export async function PUT(
     if (existing) {
       const merged = { ...existing, ...json, updatedAt: new Date().toISOString() };
       await saveCloudCustomProduct(merged);
+      try {
+        revalidatePath('/', 'page');
+        revalidatePath('/admin', 'page');
+      } catch {}
       return NextResponse.json({ success: true, product: merged });
     }
 
     return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to update product' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Update product error:', error);
+    return NextResponse.json({ error: error?.message || 'Failed to update product' }, { status: 500 });
   }
 }
 
@@ -78,11 +88,13 @@ export async function DELETE(
 
   const { id } = await params;
   try {
-    // 1. Delete from local database / in-memory
-    await deleteProduct(id).catch(e => console.warn('Local delete warning:', e));
-
-    // 2. Persist deletion in shared cloud store so ALL devices (phones & laptops) sync instantly!
+    await deleteProduct(id);
     await addCloudDeletedId(id).catch(e => console.warn('Cloud delete warning:', e));
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin', 'page');
+    } catch {}
 
     return NextResponse.json({ success: true, message: 'Product removed' });
   } catch (err: any) {
