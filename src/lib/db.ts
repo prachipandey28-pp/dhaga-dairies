@@ -448,7 +448,7 @@ function getInitialSeed(): DatabaseSchema {
       description: 'Celebrate hand-knitted creations with 15% off across all boutique pieces.',
       discountType: 'percentage',
       discountValue: 15,
-      bannerText: '🌸 SPRING SPECIAL: Flat 15% OFF with code CROCHET15 | Free Shipping on orders over ₹999 🧶',
+      bannerText: '🌸 SPRING SPECIAL: Flat 15% OFF with code CROCHET15 | Express Delivery across India 🧶',
       isBannerActive: true,
       startDate: new Date(Date.now() - 86400000).toISOString(),
       endDate: new Date(Date.now() + 30 * 86400000).toISOString(),

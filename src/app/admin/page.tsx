@@ -4209,7 +4209,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key-here`}
                 <label>Announcement Bar Banner Text</label>
                 <textarea
                   rows={2}
-                  placeholder="🌸 SPRING SPECIAL: Flat 15% OFF with code CROCHET15 | Free Shipping on orders over ₹999 🧶"
+                  placeholder="🌸 SPRING SPECIAL: Flat 15% OFF with code CROCHET15 | Express Delivery across India 🧶"
                   value={offerForm.bannerText}
                   onChange={e => setOfferForm({ ...offerForm, bannerText: e.target.value })}
                 />

@@ -99,8 +99,8 @@ export async function POST(request: Request) {
       appliedCouponCode = couponCheck.coupon?.code;
     }
 
-    // Free shipping on orders over ₹999
-    const shippingFee = subtotal >= 999 ? 0 : 79;
+    // Flat shipping ₹90 on all orders
+    const shippingFee = subtotal === 0 ? 0 : 90;
     const total = Math.max(0, subtotal - discount + shippingFee);
 
     // Create DB Order

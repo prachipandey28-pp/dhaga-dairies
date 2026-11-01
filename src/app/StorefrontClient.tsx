@@ -520,7 +520,7 @@ export default function StorefrontClient({
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const shippingFee = cartSubtotal >= 999 || cartSubtotal === 0 ? 0 : 79;
+  const shippingFee = cartSubtotal === 0 ? 0 : 90;
   const cartTotal = Math.max(0, cartSubtotal - couponDiscount + shippingFee);
 
   // Apply Coupon Code
@@ -1280,7 +1280,7 @@ export default function StorefrontClient({
               onClick={() =>
                 openInfo(
                   'Shipping & Returns',
-                  'We ship pan-India via express delivery partners. Standard delivery takes 4-7 business days depending on location. Free shipping applies on orders above ₹999. In the rare event of transit damage, notify us with unboxing photos within 48 hours for immediate replacement or refund.'
+                  'We ship pan-India via express delivery partners. Standard delivery takes 4-7 business days depending on location. Standard express shipping across India is flat ₹90 per order. In the rare event of transit damage, notify us with unboxing photos within 48 hours for immediate replacement or refund.'
                 )
               }
             >
