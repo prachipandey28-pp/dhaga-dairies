@@ -2500,9 +2500,19 @@ export async function updateReview(id: string, updates: Partial<Review>): Promis
   }
 
   const db = ensureDb();
-  if (!db.reviews) return null;
+  if (!db.reviews) db.reviews = [];
   const idx = db.reviews.findIndex(r => r.id === id);
-  if (idx === -1) return null;
+  if (idx === -1) {
+    const newRev = {
+      id,
+      ...updates,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as Review;
+    db.reviews.unshift(newRev);
+    saveDb(db);
+    return newRev;
+  }
 
   db.reviews[idx] = {
     ...db.reviews[idx],

@@ -983,7 +983,7 @@ export default function StorefrontClient({
                 .slice(0, 6)
                 .map(rev => (
                 <article key={rev.id} className="product-review-card">
-                  <img src={rev.image || 'https://images.unsplash.com/photo-1638427291164-b4adea2f7b96?auto=format&fit=crop&w=900&q=85'} alt={rev.productName} loading="lazy" />
+                  <img src={rev.image || 'https://iili.io/nSKW6og.jpg'} alt={rev.productName} loading="lazy" />
                   <div className="product-review-copy">
                     <div className="product-review-stars" aria-label={`${rev.rating} out of 5 stars`}>
                       {'★'.repeat(rev.rating)}
@@ -1004,41 +1004,41 @@ export default function StorefrontClient({
               <>
                 <article className="product-review-card">
                   <img
-                    src="https://images.unsplash.com/photo-1638427291164-b4adea2f7b96?auto=format&fit=crop&w=900&q=85"
-                    alt="Handmade crochet bag with floral details"
-                    loading="lazy"
-                  />
-                  <div className="product-review-copy">
-                    <div className="product-review-stars" aria-label="5 out of 5 stars">★★★★★</div>
-                    <h3>Daisy Dream Tote</h3>
-                    <blockquote>“The detailing is beautiful and the bag feels so special. You can tell it was made with care.”</blockquote>
-                    <p className="product-review-byline">— CUSTOMER NOTE</p>
-                  </div>
-                </article>
-                <article className="product-review-card">
-                  <img
-                    src="https://images.unsplash.com/photo-1749013308478-4176584af239?auto=format&fit=crop&w=900&q=85"
-                    alt="Colourful handmade crochet flowers"
-                    loading="lazy"
-                  />
-                  <div className="product-review-copy">
-                    <div className="product-review-stars" aria-label="5 out of 5 stars">★★★★★</div>
-                    <h3>Forever Bloom Bouquet</h3>
-                    <blockquote>“Such a thoughtful gift. The colours are lovely, and these blooms will brighten my room for ages.”</blockquote>
-                    <p className="product-review-byline">— CUSTOMER NOTE</p>
-                  </div>
-                </article>
-                <article className="product-review-card">
-                  <img
-                    src="https://images.unsplash.com/photo-1700171518313-5dd219beaaa6?auto=format&fit=crop&w=900&q=85"
-                    alt="Small handmade crochet flowers and yarn details"
+                    src="https://iili.io/nSKW6og.jpg"
+                    alt="Little Handmade Keepsake crochet gift"
                     loading="lazy"
                   />
                   <div className="product-review-copy">
                     <div className="product-review-stars" aria-label="5 out of 5 stars">★★★★★</div>
                     <h3>Little Handmade Keepsake</h3>
                     <blockquote>“A tiny piece of happiness. The stitches and colours make it feel wonderfully personal.”</blockquote>
-                    <p className="product-review-byline">— CUSTOMER NOTE</p>
+                    <p className="product-review-byline">— PRACHI <span className="verified-badge">✓ Verified</span></p>
+                  </div>
+                </article>
+                <article className="product-review-card">
+                  <img
+                    src="/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM__1__1792853378700.jpeg"
+                    alt="Handmade Rose Tulip Bloom"
+                    loading="lazy"
+                  />
+                  <div className="product-review-copy">
+                    <div className="product-review-stars" aria-label="5 out of 5 stars">★★★★★</div>
+                    <h3>Rose Tulip Bloom</h3>
+                    <blockquote>“The detailing is exquisite and the flowers are so special! Handcrafted with immense love ✿”</blockquote>
+                    <p className="product-review-byline">— AANYA S. <span className="verified-badge">✓ Verified</span></p>
+                  </div>
+                </article>
+                <article className="product-review-card">
+                  <img
+                    src="https://iili.io/n8qbLOu.jpg"
+                    alt="Handmade Crochet Scrunchie"
+                    loading="lazy"
+                  />
+                  <div className="product-review-copy">
+                    <div className="product-review-stars" aria-label="5 out of 5 stars">★★★★★</div>
+                    <h3>Crochet Scrunchie</h3>
+                    <blockquote>“Such a thoughtful handmade piece. The soft yarn and lovely colours make it so special to wear every day!”</blockquote>
+                    <p className="product-review-byline">— PRIYA M. <span className="verified-badge">✓ Verified</span></p>
                   </div>
                 </article>
               </>

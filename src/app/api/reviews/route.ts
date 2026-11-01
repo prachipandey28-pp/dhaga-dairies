@@ -78,10 +78,10 @@ export async function POST(request: Request) {
     }
 
     const defaultReviewImages = [
-      'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=600',
-      'https://images.unsplash.com/photo-1638427291164-b4adea2f7b96?w=600',
-      'https://images.unsplash.com/photo-1749013308478-4176584af239?w=600',
-      'https://images.unsplash.com/photo-1700171518313-5dd219beaaa6?w=600',
+      'https://iili.io/nSKW6og.jpg',
+      '/uploads/WhatsApp_Image_2026-10-11_at_5_22_50_PM__1__1792853378700.jpeg',
+      'https://iili.io/n8qbLOu.jpg',
+      '/uploads/WhatsApp_Image_2026-10-11_at_5_34_59_PM__1__1792852208739.jpeg',
     ];
     const reviewImage = data.image || defaultReviewImages[Math.floor(Math.random() * defaultReviewImages.length)];
 

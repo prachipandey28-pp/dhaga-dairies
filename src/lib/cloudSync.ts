@@ -46,7 +46,7 @@ export async function getCloudSync(): Promise<CloudSyncData> {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 1800);
     const res = await fetch(CLOUD_PRODUCT_SYNC_URL, {
       method: 'GET',
       headers: {
@@ -89,7 +89,7 @@ export async function updateCloudSync(data: Partial<CloudSyncData>): Promise<Clo
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4500);
+    const timeout = setTimeout(() => controller.abort(), 2000);
     await fetch(CLOUD_PRODUCT_SYNC_URL, {
       method: 'PUT',
       headers: {
@@ -188,7 +188,7 @@ export async function getCloudCategories(): Promise<CategorySyncData> {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 1800);
     const res = await fetch(CLOUD_CAT_SYNC_URL, {
       method: 'GET',
       headers: {
@@ -236,7 +236,7 @@ export async function updateCloudCategories(data: Partial<CategorySyncData>): Pr
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4500);
+    const timeout = setTimeout(() => controller.abort(), 2000);
     await fetch(CLOUD_CAT_SYNC_URL, {
       method: 'PUT',
       headers: {
@@ -361,10 +361,13 @@ export function normalizeReview(r: any, fallback?: Partial<Review>): Review {
 }
 
 export function minifyReview(r: Review): any {
-  // Strip heavy base64 strings so restful-api.dev never 500s on 1000-byte limit
-  let img = r.image || '';
+  // Strip heavy base64 strings so restful-api.dev never 500s on 800-byte limit
+  let img = (r.image || '').trim();
   if (img.startsWith('data:image/')) {
     img = '';
+  }
+  if (img.includes('?')) {
+    img = img.split('?')[0];
   }
 
   const out: Record<string, any> = {
@@ -381,7 +384,6 @@ export function minifyReview(r: Review): any {
   if (img) out.img = img;
   if (r.isApproved === false) out.a = false;
   if (r.isVerifiedPurchase === false) out.v = false;
-  if (r.updatedAt) out.ts = r.updatedAt;
 
   return out;
 }
@@ -394,7 +396,7 @@ export async function getCloudReviews(): Promise<ReviewSyncData> {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 1800);
     const res = await fetch(CLOUD_REVIEWS_SYNC_URL, {
       method: 'GET',
       headers: {
@@ -414,8 +416,13 @@ export async function getCloudReviews(): Promise<ReviewSyncData> {
         : (Array.isArray(data.reviews) ? data.reviews : []);
       const deletedIds = Array.isArray(data.deletedReviewIds) ? data.deletedReviewIds : [];
 
+      // Filter out invalid/dummy entries
+      const validCustom = rawCustom.filter((r: any) =>
+        r && r.id && (r.customerName || r.c || r.quote || r.q || r.title || r.t)
+      );
+
       const result: ReviewSyncData = {
-        customReviews: rawCustom.map((r: any) => normalizeReview(r)),
+        customReviews: validCustom.map((r: any) => normalizeReview(r)),
         deletedReviewIds: deletedIds,
         updatedAt: data.updatedAt || new Date().toISOString(),
       };
@@ -442,8 +449,10 @@ export async function updateCloudReviews(data: Partial<ReviewSyncData>): Promise
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4500);
-    const minifiedCustom = next.customReviews.map(r => minifyReview(r));
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    // Keep max 6 reviews so cloud sync object stays well below 800 bytes limit
+    const trimmedReviews = next.customReviews.slice(0, 6);
+    const minifiedCustom = trimmedReviews.map(r => minifyReview(r));
 
     await fetch(CLOUD_REVIEWS_SYNC_URL, {
       method: 'PUT',
@@ -456,7 +465,6 @@ export async function updateCloudReviews(data: Partial<ReviewSyncData>): Promise
         data: {
           customReviews: minifiedCustom,
           deletedReviewIds: next.deletedReviewIds,
-          updatedAt: next.updatedAt,
         },
       }),
       signal: controller.signal,
